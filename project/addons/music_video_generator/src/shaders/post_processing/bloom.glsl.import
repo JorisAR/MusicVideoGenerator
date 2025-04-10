@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://cx5vjilfnr1ks"
+path="res://.godot/imported/bloom.glsl-4849baa088955490f5cdd0fcb636123d.res"
+
+[deps]
+
+source_file="res://addons/music_video_generator/src/shaders/post_processing/bloom.glsl"
+dest_files=["res://.godot/imported/bloom.glsl-4849baa088955490f5cdd0fcb636123d.res"]
+
+[params]
+

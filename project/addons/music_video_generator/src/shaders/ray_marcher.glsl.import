@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://b05wvbond724m"
+path="res://.godot/imported/ray_marcher.glsl-a1cdfc345ae5d600a523b78987ccaa1b.res"
+
+[deps]
+
+source_file="res://addons/music_video_generator/src/shaders/ray_marcher.glsl"
+dest_files=["res://.godot/imported/ray_marcher.glsl-a1cdfc345ae5d600a523b78987ccaa1b.res"]
+
+[params]
+

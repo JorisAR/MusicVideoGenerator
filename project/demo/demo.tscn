@@ -1,0 +1,16 @@
+[gd_scene load_steps=2 format=3 uid="uid://s8dmi2g1hu2t"]
+
+[sub_resource type="ImageTexture" id="ImageTexture_5hjng"]
+
+[node name="Node3D" type="Node3D"]
+
+[node name="RayMarchingCamera" type="RayMarchingCamera" parent="." node_paths=PackedStringArray("output_texture")]
+output_texture = NodePath("TextureRect")
+
+[node name="TextureRect" type="TextureRect" parent="RayMarchingCamera"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = SubResource("ImageTexture_5hjng")
