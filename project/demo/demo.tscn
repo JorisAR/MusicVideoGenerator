@@ -1,11 +1,19 @@
-[gd_scene load_steps=2 format=3 uid="uid://s8dmi2g1hu2t"]
+[gd_scene load_steps=4 format=3 uid="uid://s8dmi2g1hu2t"]
+
+[ext_resource type="Script" uid="uid://bpaijq7jcidqq" path="res://demo/movable_camera.gd" id="1_d6po2"]
 
 [sub_resource type="ImageTexture" id="ImageTexture_5hjng"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_d6po2"]
+radius = 1.0
+height = 2.0
 
 [node name="Node3D" type="Node3D"]
 
 [node name="RayMarchingCamera" type="RayMarchingCamera" parent="." node_paths=PackedStringArray("output_texture")]
 output_texture = NodePath("TextureRect")
+transform = Transform3D(1, 0, 0, 0, 0.999956, 0.00938973, 0, -0.00938973, 0.999956, 0, 0, 3.09351)
+script = ExtResource("1_d6po2")
 
 [node name="TextureRect" type="TextureRect" parent="RayMarchingCamera"]
 anchors_preset = 15
@@ -14,3 +22,12 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 texture = SubResource("ImageTexture_5hjng")
+
+[node name="Camera3D" type="Camera3D" parent="RayMarchingCamera"]
+visible = false
+fov = 90.0
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.0857763)
+visible = false
+mesh = SubResource("SphereMesh_d6po2")

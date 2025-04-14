@@ -1,13 +1,10 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include "bounds.h"
 #include <godot_cpp/classes/object.hpp>
 #include <godot_cpp/variant/packed_float32_array.hpp>
 #include <godot_cpp/variant/packed_int32_array.hpp>
 #include <godot_cpp/variant/string.hpp>
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/string_cast.hpp>
 #include <vector>
 
 namespace godot
@@ -65,15 +62,41 @@ class Utils : public Object
         return string + "]";
     }
 
-    static godot::String to_string(const Bounds &bounds)
-    {
-        return godot::String(("{" + glm::to_string(bounds.min) + ", " + glm::to_string(bounds.max) + "}").c_str());
+    // template <class matType> static godot::String to_string(const matType &v)
+    // {
+    //     return godot::String(("{" + glm::to_string(v) + "}").c_str());
+    // }
+
+    static void print_projection(Projection projection) {
+        String str = "Projection:\n";
+        for (int i = 0; i < 4; i++)
+        {
+            str += String::num(projection[i].x) + ", " + String::num(projection[i].y) + ", " + String::num(projection[i].z) + ", " + String::num(projection[i].w) + "\n";
+        }
+        UtilityFunctions::print(str);
     }
 
-    template<class matType>
-    static godot::String to_string(const matType &v)
+    static inline void projection_to_float(float *target, const Projection &t)
     {
-        return godot::String(("{" + glm::to_string(v) + "}").c_str());
+        for (size_t i = 0; i < 4; i++)
+        {
+            target[i * 4] = t.columns[i].x;
+            target[i * 4 + 1] = t.columns[i].y;
+            target[i * 4 + 2] = t.columns[i].z;
+            target[i * 4 + 3] = t.columns[i].w;
+        }
+    }
+
+    static inline void projection_to_float_transposed(float *target, const Projection &t)
+    {
+        for (size_t i = 0; i < 4; i++)
+        {
+            target[i * 4] = t.columns[0][i];
+            target[i * 4 + 1] = t.columns[1][i];
+            target[i * 4 + 2] = t.columns[2][i];
+            target[i * 4 + 3] = t.columns[3][i];
+        }
+        
     }
 };
 

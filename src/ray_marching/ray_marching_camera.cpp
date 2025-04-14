@@ -1,4 +1,5 @@
 #include "ray_marching_camera.h"
+#include "utility/utils.h"
 
 void RayMarchingCamera::_bind_methods()
 {
@@ -82,22 +83,37 @@ void RayMarchingCamera::init()
 
 
     //get resolution
-    auto resolution = DisplayServer::get_singleton()->window_get_size();
+    Vector2i resolution = DisplayServer::get_singleton()->window_get_size();
+    auto near = 0.01f;
+    auto far = 1000.0f;    
 
-    { // setup parameters
-        render_parameters.width = resolution.x;
-        render_parameters.height = resolution.y;
-        render_parameters.fov = fov;
-        projection_matrix = Projection::create_perspective(fov, static_cast<float>(render_parameters.width) / render_parameters.height, 0.01f, 1000.0f, false);
-        //camera.set_camera_transform(get_global_transform().affine_inverse(), projection_matrix);
-    }
+    projection_matrix = Projection::create_perspective(fov, static_cast<float>(resolution.width) / resolution.height, near, far, false);
+
 
     // setup compute shader
     cs = new ComputeShader("res://addons/music_video_generator/src/shaders/ray_marcher.glsl", _rd, {"#define TESTe"});
     //--------- GENERAL BUFFERS ---------
     { // input general buffer
+        render_parameters.width = resolution.x;
+        render_parameters.height = resolution.y;
+        render_parameters.fov = fov;
+
         render_parameters_rid = cs->create_storage_buffer_uniform(render_parameters.to_packed_byte_array(), 2, 0);
-        //camera_rid = cs->create_storage_buffer_uniform(camera.to_packed_byte_array(), 3, 0);
+    }
+
+    { //camera buffer        
+        Vector3 camera_position = get_global_transform().get_origin();
+        Projection VP = projection_matrix * get_global_transform().affine_inverse();
+        Projection IVP = VP.inverse();
+
+        Utils::projection_to_float(camera_parameters.vp, VP);
+        Utils::projection_to_float(camera_parameters.ivp, IVP);
+        camera_parameters.cameraPosition = Vector4(camera_position.x, camera_position.y, camera_position.z, 1.0f);
+        camera_parameters.frame_index = 0;
+        camera_parameters.nearPlane = near;
+        camera_parameters.farPlane = far;
+
+        camera_parameters_rid = cs->create_storage_buffer_uniform(camera_parameters.to_packed_byte_array(), 3, 0);
     }
 
     Ref<RDTextureView> output_texture_view = memnew(RDTextureView);
@@ -134,9 +150,15 @@ void RayMarchingCamera::render()
     if (cs == nullptr || !cs->check_ready())
         return;
     // update rendering parameters
-    //camera.set_camera_transform(get_global_transform(), projection_matrix);
-    // camera.frame_index++;
-    // cs->update_storage_buffer_uniform(camera_rid, camera.to_packed_byte_array());
+    Vector3 camera_position = get_global_transform().get_origin();
+    Projection VP = projection_matrix * get_global_transform().affine_inverse();
+    Projection IVP = VP.inverse();
+
+    Utils::projection_to_float(camera_parameters.vp, VP);
+    Utils::projection_to_float(camera_parameters.ivp, IVP);
+    camera_parameters.cameraPosition = Vector4(camera_position.x, camera_position.y, camera_position.z, 1.0f);
+    camera_parameters.frame_index++;
+    cs->update_storage_buffer_uniform(camera_parameters_rid, camera_parameters.to_packed_byte_array());
 
     // render
     Vector2i Size = {render_parameters.width, render_parameters.height};
@@ -149,5 +171,4 @@ void RayMarchingCamera::render()
     output_image->set_data(Size.x, Size.y, false, Image::FORMAT_RGBA8,
                            cs->get_image_uniform_buffer(output_texture_rid));
     output_texture->update(output_image);
-    // load texture data?
 }

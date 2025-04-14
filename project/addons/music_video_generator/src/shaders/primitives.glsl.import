@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://cvq3rqupuxv73"
+path="res://.godot/imported/primitives.glsl-17ea1962eb7a98493a593355e0bed273.res"
+
+[deps]
+
+source_file="res://addons/music_video_generator/src/shaders/primitives.glsl"
+dest_files=["res://.godot/imported/primitives.glsl-17ea1962eb7a98493a593355e0bed273.res"]
+
+[params]
+
