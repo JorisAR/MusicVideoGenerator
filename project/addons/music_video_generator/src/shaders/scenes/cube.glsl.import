@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://nxi38t5nfh5"
+path="res://.godot/imported/cube.glsl-67d890960f64c34e81ff5aa057954160.res"
+
+[deps]
+
+source_file="res://addons/music_video_generator/src/shaders/scenes/cube.glsl"
+dest_files=["res://.godot/imported/cube.glsl-67d890960f64c34e81ff5aa057954160.res"]
+
+[params]
+
