@@ -2,6 +2,7 @@
 #define PATH_TRACING_CAMERA_H
 
 #include "gdcs/include/gdcs.h"
+#include "audio/music_manager.h"
 #include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/classes/image.hpp>
 #include <godot_cpp/classes/image_texture.hpp>
@@ -61,6 +62,19 @@ class RayMarchingCamera : public Node3D
         }
     };
 
+    struct MusicData
+    {
+        Vector4 data;
+
+        PackedByteArray to_packed_byte_array()
+        {
+            PackedByteArray byte_array;
+            byte_array.resize(sizeof(MusicData));
+            std::memcpy(byte_array.ptrw(), this, sizeof(MusicData));
+            return byte_array;
+        }
+    };
+
   protected:
     static void _bind_methods();
 
@@ -76,6 +90,10 @@ class RayMarchingCamera : public Node3D
     TextureRect *get_output_texture() const;
     void set_output_texture(TextureRect *value);
 
+    MusicManager *get_music_manager() const;
+    void set_music_manager(MusicManager *value);
+
+
   private:
     void init();
     void clear_compute_shader();
@@ -86,19 +104,23 @@ class RayMarchingCamera : public Node3D
 
     ComputeShader *cs = nullptr;
     TextureRect *output_texture_rect = nullptr;
+    MusicManager *music_manager = nullptr;
     Ref<Image> output_image;
     Ref<Image> depth_image;
     Ref<ImageTexture> output_texture;
 
     RenderParameters render_parameters;
     CameraParameters camera_parameters;
-    Projection projection_matrix;
+    MusicData music_data;
+    Projection projection_matrix;   
+
 
     // BUFFER IDs
     RID output_texture_rid;
     RID depth_texture_rid;
     RID render_parameters_rid;
     RID camera_parameters_rid;
+    RID music_data_rid;
     RenderingDevice *_rd;
 };
 

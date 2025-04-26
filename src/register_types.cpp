@@ -1,5 +1,10 @@
 #include "register_types.h"
 #include "ray_marching/ray_marching_camera.h"
+#include "audio/song_settings.h"
+#include "audio/music_manager.h"
+#include "audio/envelope_generators/envelope_generator.h"
+#include "audio/envelope_generators/dual_envelope_transient_generator.h"
+#include "audio/envelope_generators/beat_sequencer_envelope.h"
 
 using namespace godot;
 
@@ -8,9 +13,19 @@ void initialize_music_video_generator_module(ModuleInitializationLevel p_level)
     if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE)
     {
 
-        GDREGISTER_CLASS(RayMarchingCamera);
-        UtilityFunctions::print("Music Video Generator module initialized.");
+        //Music Managing
+        GDREGISTER_CLASS(SongSettings);
+        GDREGISTER_CLASS(MusicManager);
 
+        //generators
+        GDREGISTER_ABSTRACT_CLASS(EnvelopeGenerator);
+        GDREGISTER_CLASS(DualEnvelopeTransientGenerator);
+        GDREGISTER_CLASS(BeatSequencerEnvelope);
+        // UtilityFunctions::print("Music Video Generator module initialized.");
+
+
+        //Rendering
+        GDREGISTER_CLASS(RayMarchingCamera);
     }
 }
 

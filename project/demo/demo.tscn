@@ -1,6 +1,7 @@
-[gd_scene load_steps=4 format=3 uid="uid://s8dmi2g1hu2t"]
+[gd_scene load_steps=7 format=3 uid="uid://s8dmi2g1hu2t"]
 
 [ext_resource type="Script" uid="uid://bpaijq7jcidqq" path="res://demo/movable_camera.gd" id="1_d6po2"]
+[ext_resource type="AudioStream" uid="uid://dsk461jkdap0q" path="res://demo/assets/Cymatics - Odyssey Midtempo Drum Loop 1 - 91 BPM.wav" id="2_ytiva"]
 
 [sub_resource type="ImageTexture" id="ImageTexture_5hjng"]
 
@@ -8,10 +9,18 @@
 radius = 1.0
 height = 2.0
 
-[node name="Node3D" type="Node3D"]
+[sub_resource type="SongSettings" id="SongSettings_ytiva"]
+bpm = 91.0
+song_title = "Test"
 
-[node name="RayMarchingCamera" type="RayMarchingCamera" parent="." node_paths=PackedStringArray("output_texture")]
+[sub_resource type="BeatSequencerEnvelope" id="BeatSequencerEnvelope_dar0o"]
+sequence = Array[bool]([true, true, true, true])
+
+[node name="Demo" type="Node3D"]
+
+[node name="RayMarchingCamera" type="RayMarchingCamera" parent="." node_paths=PackedStringArray("output_texture", "music_manager")]
 output_texture = NodePath("TextureRect")
+music_manager = NodePath("../MusicManager")
 transform = Transform3D(1, 0, 0, 0, 0.999956, 0.00938973, 0, -0.00938973, 0.999956, 0, 0, 3.09351)
 script = ExtResource("1_d6po2")
 
@@ -31,3 +40,13 @@ fov = 90.0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.0857763)
 visible = false
 mesh = SubResource("SphereMesh_d6po2")
+
+[node name="MusicManager" type="MusicManager" parent="." node_paths=PackedStringArray("audio_stream_player")]
+audio_stream_player = NodePath("AudioStreamPlayer")
+song_settings = SubResource("SongSettings_ytiva")
+envelope_generators = Array[EnvelopeGenerator]([SubResource("BeatSequencerEnvelope_dar0o")])
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="MusicManager"]
+stream = ExtResource("2_ytiva")
+autoplay = true
+bus = &"Music"

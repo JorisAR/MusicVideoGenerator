@@ -14,11 +14,13 @@ env.Append(CPPPATH=[
     "src/utility/",
     "src/",
     "src/ray_marching/"
+    "src/audio/"
+    "src/audio/envelope_generators/"
 ])
 
 # # Add main source files
 sources = Glob("src/*.cpp") + Glob("src/utility/*.cpp") + Glob("src/gdcs/src/*.cpp") + \
-      Glob("src/ray_marching/*.cpp")
+      Glob("src/ray_marching/*.cpp") + Glob("src/audio/*.cpp") + Glob("src/audio/envelope_generators/*.cpp")
 
 #compiler flags
 if env['PLATFORM'] == 'windows':

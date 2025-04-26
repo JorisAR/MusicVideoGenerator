@@ -15,6 +15,11 @@ void RayMarchingCamera::_bind_methods()
     ClassDB::bind_method(D_METHOD("set_output_texture", "value"), &RayMarchingCamera::set_output_texture);
     ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "output_texture", PROPERTY_HINT_NODE_TYPE, "TextureRect"),
                  "set_output_texture", "get_output_texture");
+
+    ClassDB::bind_method(D_METHOD("get_music_manager"), &RayMarchingCamera::get_music_manager);
+    ClassDB::bind_method(D_METHOD("set_music_manager", "value"), &RayMarchingCamera::set_music_manager);
+    ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "music_manager", PROPERTY_HINT_NODE_TYPE, "MusicManager"),
+                "set_music_manager", "get_music_manager");
 }
 
 void RayMarchingCamera::_notification(int p_what)
@@ -70,11 +75,20 @@ TextureRect *RayMarchingCamera::get_output_texture() const
     return output_texture_rect;
 }
 
+void RayMarchingCamera::set_music_manager(MusicManager *value)
+{
+    music_manager = value;
+}
+
 void RayMarchingCamera::set_output_texture(TextureRect *value)
 {
     output_texture_rect = value;
 }
 
+MusicManager *RayMarchingCamera::get_music_manager() const
+{
+    return music_manager;
+}
 
 void RayMarchingCamera::init()
 {
@@ -116,6 +130,11 @@ void RayMarchingCamera::init()
         camera_parameters_rid = cs->create_storage_buffer_uniform(camera_parameters.to_packed_byte_array(), 3, 0);
     }
 
+    { //music data buffer
+        
+        music_data_rid = cs->create_storage_buffer_uniform(music_data.to_packed_byte_array(), 4, 0);
+    }
+
     Ref<RDTextureView> output_texture_view = memnew(RDTextureView);
     { // output texture
         auto output_format = cs->create_texture_format(render_parameters.width, render_parameters.height, RenderingDevice::DATA_FORMAT_R8G8B8A8_UNORM);
@@ -150,15 +169,25 @@ void RayMarchingCamera::render()
     if (cs == nullptr || !cs->check_ready())
         return;
     // update rendering parameters
-    Vector3 camera_position = get_global_transform().get_origin();
-    Projection VP = projection_matrix * get_global_transform().affine_inverse();
-    Projection IVP = VP.inverse();
+    {
+        Vector3 camera_position = get_global_transform().get_origin();
+        Projection VP = projection_matrix * get_global_transform().affine_inverse();
+        Projection IVP = VP.inverse();
+    
+        Utils::projection_to_float(camera_parameters.vp, VP);
+        Utils::projection_to_float(camera_parameters.ivp, IVP);
+        camera_parameters.cameraPosition = Vector4(camera_position.x, camera_position.y, camera_position.z, 1.0f);
+        camera_parameters.frame_index++;
+        cs->update_storage_buffer_uniform(camera_parameters_rid, camera_parameters.to_packed_byte_array());
+    }
 
-    Utils::projection_to_float(camera_parameters.vp, VP);
-    Utils::projection_to_float(camera_parameters.ivp, IVP);
-    camera_parameters.cameraPosition = Vector4(camera_position.x, camera_position.y, camera_position.z, 1.0f);
-    camera_parameters.frame_index++;
-    cs->update_storage_buffer_uniform(camera_parameters_rid, camera_parameters.to_packed_byte_array());
+    //update music data
+    {
+        Vector4 raw_magnitude_data = music_manager->get_raw_magnitude_data();
+        // PackedFloat32Array raw_magnitude_data = {0.5f};
+        music_data.data = Vector4(raw_magnitude_data[0], 0, 0, 0);
+        cs->update_storage_buffer_uniform(music_data_rid, music_data.to_packed_byte_array());
+    }
 
     // render
     Vector2i Size = {render_parameters.width, render_parameters.height};

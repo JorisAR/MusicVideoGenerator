@@ -41,6 +41,10 @@ layout(std430, set = 0, binding = 3) restrict buffer Camera {
     float padding;
 } camera;
 
+layout(std430, set = 0, binding = 4) restrict buffer MusicData {
+    vec4 raw;
+} music_data;
+
 // ----------------------------------- FUNCTIONS -----------------------------------
 
 vec2 pcg2d(inout uvec2 seed) {
@@ -160,7 +164,7 @@ void main() {
     vec3 directional_light = normalize(vec3(1.0, 1.0, 1.0));
 
     float t = raymarch(ray_origin, ray_dir);
-    vec3 color = vec3(0.0);
+    vec3 color = vec3(music_data.raw.x);
 
     if (t >= 0.0) {
         vec3 hitPos = ray_origin + t * ray_dir;
