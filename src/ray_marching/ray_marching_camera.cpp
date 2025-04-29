@@ -103,16 +103,29 @@ void RayMarchingCamera::init()
 
     projection_matrix = Projection::create_perspective(fov, static_cast<float>(resolution.width) / resolution.height, near, far, false);
 
-
     // setup compute shader
-    cs = new ComputeShader("res://addons/music_video_generator/src/shaders/ray_marcher.glsl", _rd, {"#define TESTe"});
+    std::vector<godot::String> args = {}; //set scene name?
+    ray_marching_shader = new ComputeShader("res://addons/music_video_generator/src/shaders/ray_marcher.glsl", _rd, args);
+    cone_marching_shader = new ComputeShader("res://addons/music_video_generator/src/shaders/cone_marcher.glsl", _rd, args);
+
+    float cone_resolution_scale = 0.1f; // scale for cone resolution
     //--------- GENERAL BUFFERS ---------
-    { // input general buffer
+    { // cone marching parameters buffer
+        cone_marching_parameters.width = resolution.x * cone_resolution_scale;
+        cone_marching_parameters.height = resolution.y * cone_resolution_scale;
+        cone_marching_parameters.fov = fov;
+        cone_marching_parameters.pixelConeAngle = std::tan(cone_marching_parameters.fov * 0.5f) / (0.5f * float(cone_marching_parameters.width));
+
+        cone_marching_parameters_rid = cone_marching_shader->create_storage_buffer_uniform(cone_marching_parameters.to_packed_byte_array(), 0, 1);
+    }
+
+    { // ray marching parameters buffer
         render_parameters.width = resolution.x;
         render_parameters.height = resolution.y;
         render_parameters.fov = fov;
+        render_parameters.coneResolutionScale = cone_resolution_scale;
 
-        render_parameters_rid = cs->create_storage_buffer_uniform(render_parameters.to_packed_byte_array(), 2, 0);
+        render_parameters_rid = ray_marching_shader->create_storage_buffer_uniform(render_parameters.to_packed_byte_array(), 0, 1);
     }
 
     { //camera buffer        
@@ -127,17 +140,26 @@ void RayMarchingCamera::init()
         camera_parameters.nearPlane = near;
         camera_parameters.farPlane = far;
 
-        camera_parameters_rid = cs->create_storage_buffer_uniform(camera_parameters.to_packed_byte_array(), 3, 0);
+        camera_parameters_rid = ray_marching_shader->create_storage_buffer_uniform(camera_parameters.to_packed_byte_array(), 1, 1);
+        cone_marching_shader->add_existing_buffer(camera_parameters_rid, RenderingDevice::UNIFORM_TYPE_STORAGE_BUFFER, 1, 1);
     }
 
-    { //music data buffer
-        
-        music_data_rid = cs->create_storage_buffer_uniform(music_data.to_packed_byte_array(), 4, 0);
+    { //music data buffer        
+        music_data_rid = ray_marching_shader->create_storage_buffer_uniform(music_data.to_packed_byte_array(), 2, 1);
+        cone_marching_shader->add_existing_buffer(music_data_rid, RenderingDevice::UNIFORM_TYPE_STORAGE_BUFFER, 2, 1);
+    }    
+
+    Ref<RDTextureView> cone_texture_view = memnew(RDTextureView);
+    { //cone marching texture
+        auto cone_format = ray_marching_shader->create_texture_format(cone_marching_parameters.width, cone_marching_parameters.height, RenderingDevice::DATA_FORMAT_R32_SFLOAT);
+        cone_image = Image::create(cone_marching_parameters.width, cone_marching_parameters.height, false, Image::FORMAT_RF);        
+        cone_texture_rid = cone_marching_shader->create_image_uniform(cone_image, cone_format, cone_texture_view, 0, 0);
+        ray_marching_shader->add_existing_buffer(cone_texture_rid, RenderingDevice::UNIFORM_TYPE_IMAGE, 2, 0);
     }
 
     Ref<RDTextureView> output_texture_view = memnew(RDTextureView);
     { // output texture
-        auto output_format = cs->create_texture_format(render_parameters.width, render_parameters.height, RenderingDevice::DATA_FORMAT_R8G8B8A8_UNORM);
+        auto output_format = ray_marching_shader->create_texture_format(render_parameters.width, render_parameters.height, RenderingDevice::DATA_FORMAT_R8G8B8A8_UNORM);
         if (output_texture_rect == nullptr)
         {
             UtilityFunctions::printerr("No output texture set.");
@@ -147,17 +169,18 @@ void RayMarchingCamera::init()
         output_texture = ImageTexture::create_from_image(output_image);
         output_texture_rect->set_texture(output_texture);
         
-        output_texture_rid = cs->create_image_uniform(output_image, output_format, output_texture_view, 0, 0);
+        output_texture_rid = ray_marching_shader->create_image_uniform(output_image, output_format, output_texture_view, 0, 0);
     }
 
     Ref<RDTextureView> depth_texture_view = memnew(RDTextureView);
     { // depth texture
-        auto depth_format = cs->create_texture_format(render_parameters.width, render_parameters.height, RenderingDevice::DATA_FORMAT_R32_SFLOAT);
+        auto depth_format = ray_marching_shader->create_texture_format(render_parameters.width, render_parameters.height, RenderingDevice::DATA_FORMAT_R32_SFLOAT);
         depth_image = Image::create(render_parameters.width, render_parameters.height, false, Image::FORMAT_RF);        
-        depth_texture_rid = cs->create_image_uniform(depth_image, depth_format, depth_texture_view, 1, 0);
+        depth_texture_rid = ray_marching_shader->create_image_uniform(depth_image, depth_format, depth_texture_view, 1, 0);
     }
 
-    cs->finish_create_uniforms();
+    ray_marching_shader->finish_create_uniforms();
+    cone_marching_shader->finish_create_uniforms();
 }
 
 void RayMarchingCamera::clear_compute_shader()
@@ -166,9 +189,9 @@ void RayMarchingCamera::clear_compute_shader()
 
 void RayMarchingCamera::render()
 {
-    if (cs == nullptr || !cs->check_ready())
+    if (ray_marching_shader == nullptr || !ray_marching_shader->check_ready() || cone_marching_shader == nullptr || !cone_marching_shader->check_ready())
         return;
-    // update rendering parameters
+    // update camera parameters
     {
         Vector3 camera_position = get_global_transform().get_origin();
         Projection VP = projection_matrix * get_global_transform().affine_inverse();
@@ -178,7 +201,7 @@ void RayMarchingCamera::render()
         Utils::projection_to_float(camera_parameters.ivp, IVP);
         camera_parameters.cameraPosition = Vector4(camera_position.x, camera_position.y, camera_position.z, 1.0f);
         camera_parameters.frame_index++;
-        cs->update_storage_buffer_uniform(camera_parameters_rid, camera_parameters.to_packed_byte_array());
+        ray_marching_shader->update_storage_buffer_uniform(camera_parameters_rid, camera_parameters.to_packed_byte_array());
     }
 
     //update music data
@@ -186,18 +209,21 @@ void RayMarchingCamera::render()
         Vector4 raw_magnitude_data = music_manager->get_raw_magnitude_data();
         // PackedFloat32Array raw_magnitude_data = {0.5f};
         music_data.data = Vector4(raw_magnitude_data[0], 0, 0, 0);
-        cs->update_storage_buffer_uniform(music_data_rid, music_data.to_packed_byte_array());
+        ray_marching_shader->update_storage_buffer_uniform(music_data_rid, music_data.to_packed_byte_array());
     }
 
-    // render
+    // render    
+    cone_marching_shader->compute({static_cast<int32_t>(std::ceil(cone_marching_parameters.width / 32.0f)), static_cast<int32_t>(std::ceil(cone_marching_parameters.height / 32.0f)), 1});
+    
     Vector2i Size = {render_parameters.width, render_parameters.height};
-    cs->compute({static_cast<int32_t>(std::ceil(Size.x / 32.0f)), static_cast<int32_t>(std::ceil(Size.y / 32.0f)), 1});
+    
+    ray_marching_shader->compute({static_cast<int32_t>(std::ceil(Size.x / 32.0f)), static_cast<int32_t>(std::ceil(Size.y / 32.0f)), 1});
     
     { // post processing
 
     }
     
     output_image->set_data(Size.x, Size.y, false, Image::FORMAT_RGBA8,
-                           cs->get_image_uniform_buffer(output_texture_rid));
+    ray_marching_shader->get_image_uniform_buffer(output_texture_rid));
     output_texture->update(output_image);
 }

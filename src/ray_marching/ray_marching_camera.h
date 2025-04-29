@@ -31,14 +31,29 @@ class RayMarchingCamera : public Node3D
         int width;
         int height;
         float fov;
-        unsigned int triangleCount;
-        unsigned int blasCount;
+        float coneResolutionScale;
 
         PackedByteArray to_packed_byte_array()
         {
             PackedByteArray byte_array;
             byte_array.resize(sizeof(RenderParameters));
             std::memcpy(byte_array.ptrw(), this, sizeof(RenderParameters));
+            return byte_array;
+        }
+    };
+
+    struct ConeMarchingParameters // match the struct on the gpu
+    {
+        int width;
+        int height;
+        float fov;
+        float pixelConeAngle;
+
+        PackedByteArray to_packed_byte_array()
+        {
+            PackedByteArray byte_array;
+            byte_array.resize(sizeof(ConeMarchingParameters));
+            std::memcpy(byte_array.ptrw(), this, sizeof(ConeMarchingParameters));
             return byte_array;
         }
     };
@@ -102,13 +117,16 @@ class RayMarchingCamera : public Node3D
     float fov = 90.0f;
     // int num_bounces = 4;
 
-    ComputeShader *cs = nullptr;
+    ComputeShader *ray_marching_shader = nullptr;
+    ComputeShader *cone_marching_shader = nullptr;
     TextureRect *output_texture_rect = nullptr;
     MusicManager *music_manager = nullptr;
     Ref<Image> output_image;
     Ref<Image> depth_image;
+    Ref<Image> cone_image;
     Ref<ImageTexture> output_texture;
 
+    ConeMarchingParameters cone_marching_parameters;
     RenderParameters render_parameters;
     CameraParameters camera_parameters;
     MusicData music_data;
@@ -118,6 +136,8 @@ class RayMarchingCamera : public Node3D
     // BUFFER IDs
     RID output_texture_rid;
     RID depth_texture_rid;
+    RID cone_texture_rid;
+    RID cone_marching_parameters_rid;
     RID render_parameters_rid;
     RID camera_parameters_rid;
     RID music_data_rid;

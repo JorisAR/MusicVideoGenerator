@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://eb0rqc535jif"
+path="res://.godot/imported/cone_marcher.glsl-97e0872fa30c2fcb752327b600911324.res"
+
+[deps]
+
+source_file="res://addons/music_video_generator/src/shaders/cone_marcher.glsl"
+dest_files=["res://.godot/imported/cone_marcher.glsl-97e0872fa30c2fcb752327b600911324.res"]
+
+[params]
+

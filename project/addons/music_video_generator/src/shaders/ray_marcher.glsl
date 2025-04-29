@@ -21,17 +21,18 @@ struct Ray {
 
 layout(set = 0, binding = 0, rgba8) restrict uniform writeonly image2D outputImage;
 layout(set = 0, binding = 1, r32f) restrict uniform writeonly image2D depthBuffer;
+layout(set = 0, binding = 2, r32f) restrict uniform image2D coneBuffer;
 
-layout(std430, set = 0, binding = 2) restrict buffer Params {
+
+layout(std430, set = 1, binding = 0) restrict buffer Params {
     vec4 background; //rgb, brightness
     int width;
     int height;
     float fov;
-    uint triangleCount;
-    uint blas_count;
+    float cone_resolution_scale;
 } params;
 
-layout(std430, set = 0, binding = 3) restrict buffer Camera {
+layout(std430, set = 1, binding = 1) restrict buffer Camera {
     mat4 view_projection;
     mat4 inv_view_projection;
     vec4 position;
@@ -41,7 +42,7 @@ layout(std430, set = 0, binding = 3) restrict buffer Camera {
     float padding;
 } camera;
 
-layout(std430, set = 0, binding = 4) restrict buffer MusicData {
+layout(std430, set = 1, binding = 2) restrict buffer MusicData {
     vec4 raw;
 } music_data;
 
@@ -79,11 +80,11 @@ vec3 sampleSky(const vec3 direction) {
 }
 
 float raymarch(vec3 origin, vec3 direction) {
-    float t = 0.0;
+    float t = 0.0f;
     for (int i = 0; i < 250 && t < camera.far; i++) {
         vec3 p = origin + t * direction;
         float dist = sdScene(p);
-        if (dist < 0.005) {
+        if (dist < 0.005 && i > 0) {
             return t;
         }
         t += dist;
@@ -159,6 +160,11 @@ void main() {
     world_pos /= world_pos.w;
     vec3 ray_origin = camera.position.xyz;
     vec3 ray_dir = normalize(world_pos.xyz - ray_origin);
+
+    float init_t = imageLoad(coneBuffer, ivec2(clamp(pos * params.cone_resolution_scale, vec2(0), vec2(params.cone_resolution_scale * params.width - 1, params.cone_resolution_scale * params.height - 1)))).r;
+    ray_origin += ray_dir * init_t;
+    // imageStore(outputImage, pos, vec4(vec3(init_t), 1.0));
+    // return;
 
     // Define a simple directional light (e.g., coming from (1, 1, 1)).
     vec3 directional_light = normalize(vec3(1.0, 1.0, 1.0));
