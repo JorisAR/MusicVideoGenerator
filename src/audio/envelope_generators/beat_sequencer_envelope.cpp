@@ -8,7 +8,7 @@ BeatSequencerEnvelope::BeatSequencerEnvelope() {
 
     beat_sequence = Array();
     for (int i = 0; i < 4; i++) {
-        beat_sequence.append(false);
+        beat_sequence.append(true);
     }
 }
 
@@ -17,7 +17,7 @@ BeatSequencerEnvelope::BeatSequencerEnvelope() {
 void BeatSequencerEnvelope::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_beat_sequence", "sequence"), &BeatSequencerEnvelope::set_beat_sequence);
     ClassDB::bind_method(D_METHOD("get_beat_sequence"), &BeatSequencerEnvelope::get_beat_sequence);
-    ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "sequence"), "set_beat_sequence", "get_beat_sequence");
+    ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "sequence", PROPERTY_HINT_ARRAY_TYPE, String::num(Variant::BOOL)), "set_beat_sequence", "get_beat_sequence");
 
     ClassDB::bind_method(D_METHOD("set_attack_time", "attack_time"), &BeatSequencerEnvelope::set_attack_time);
     ClassDB::bind_method(D_METHOD("get_attack_time"), &BeatSequencerEnvelope::get_attack_time);
@@ -32,7 +32,8 @@ void BeatSequencerEnvelope::init(Ref<SongSettings> song_settings)
 {
     _song_settings = song_settings;
     envelope = 0.0f;
-    time_since_last_beat = 0.0f;
+    time_stamp_last_beat = 0.0f;
+    global_beat_index = 0;
     current_beat_index = -1; 
     envelope_phase = EnvelopePhase::ENVELOPE_IDLE;
     phase_timer = 0.0f;
@@ -40,14 +41,13 @@ void BeatSequencerEnvelope::init(Ref<SongSettings> song_settings)
 
 // Process the envelope per frame.
 float BeatSequencerEnvelope::process(float delta) {
-    // Calculate beat interval from BPM (assuming BPM is for quarter notes).
     float beat_interval = 60.0f / _song_settings->get_bpm();
-    time_since_last_beat += delta;
 
-    if (time_since_last_beat >= beat_interval || current_beat_index < 0) {
-        time_since_last_beat = 0.0f;
+    if (time_elapsed - time_stamp_last_beat >= beat_interval || current_beat_index < 0) {
+        time_stamp_last_beat = beat_interval * global_beat_index;
+        global_beat_index++;
         current_beat_index = (current_beat_index + 1) % beat_sequence.size();
-        // Only trigger the envelope if this beat is active.
+
         if (bool(beat_sequence[current_beat_index])) {
             // Reset envelope state on trigger.
             envelope = 0.0f;
@@ -86,6 +86,8 @@ float BeatSequencerEnvelope::process(float delta) {
             envelope = 0.0f;
             break;
     }
+
+    time_elapsed += delta;
 
     return envelope;
 }

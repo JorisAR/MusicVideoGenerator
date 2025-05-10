@@ -13,24 +13,19 @@ class SongSettings : public Resource {
 public:
     SongSettings();
     ~SongSettings();
-
-    // BPM (beats per minute)
+    
     void set_bpm(float p_bpm);
     float get_bpm() const;
 
-    // Time signature numerator (default: 4)
     void set_time_signature_numerator(int p_numerator);
     int get_time_signature_numerator() const;
 
-    // Time signature denominator (default: 4)
     void set_time_signature_denominator(int p_denominator);
     int get_time_signature_denominator() const;
 
-    // Optional: A song title for metadata purposes.
     void set_song_title(const String &p_title);
     String get_song_title() const;
 
-    // Optional: Time offset (in seconds) for the start of the song.
     void set_time_offset(float p_offset);
     float get_time_offset() const;
 

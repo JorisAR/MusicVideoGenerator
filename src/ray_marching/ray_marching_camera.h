@@ -66,7 +66,7 @@ class RayMarchingCamera : public Node3D
         int frame_index;
         float nearPlane;
         float farPlane;
-        float padding;
+        float time;
 
         PackedByteArray to_packed_byte_array()
         {
@@ -99,6 +99,21 @@ class RayMarchingCamera : public Node3D
     float get_fov() const;
     void set_fov(float value);
 
+    float get_near_plane() const;
+    void set_near_plane(float value);
+
+    float get_far_plane() const;
+    void set_far_plane(float value);
+
+    Color get_background_color() const;
+    void set_background_color(const Color &value);
+
+    int get_cone_resolution_scale() const;
+    void set_cone_resolution_scale(int value);
+
+    bool is_cone_marching_enabled() const;
+    void set_cone_marching_enabled(bool value);
+
     // int get_num_bounces() const;
     // void set_num_bounces(int value);
 
@@ -108,6 +123,10 @@ class RayMarchingCamera : public Node3D
     MusicManager *get_music_manager() const;
     void set_music_manager(MusicManager *value);
 
+    
+    int get_scene_id() const;
+    void set_scene_id(int value);
+
 
   private:
     void init();
@@ -115,7 +134,12 @@ class RayMarchingCamera : public Node3D
     void render();
 
     float fov = 90.0f;
-    // int num_bounces = 4;
+    int scene_id = 0;
+    float near_plane = 0.5f;
+    float far_plane = 1000.0f;
+    Color background_color = Color(0.0, 0.0, 0.0, 1.0);
+    int cone_resolution_scale = 10;
+    bool cone_marching_enabled = true;
 
     ComputeShader *ray_marching_shader = nullptr;
     ComputeShader *cone_marching_shader = nullptr;

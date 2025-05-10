@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://chk35kish2squ"
+path="res://.godot/imported/scenes.glsl-026c8bc4ba6812bea2cabf2ec242f5bf.res"
+
+[deps]
+
+source_file="res://addons/music_video_generator/src/shaders/scenes.glsl"
+dest_files=["res://.godot/imported/scenes.glsl-026c8bc4ba6812bea2cabf2ec242f5bf.res"]
+
+[params]
+

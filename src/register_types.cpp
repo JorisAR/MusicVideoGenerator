@@ -5,6 +5,10 @@
 #include "audio/envelope_generators/envelope_generator.h"
 #include "audio/envelope_generators/dual_envelope_transient_generator.h"
 #include "audio/envelope_generators/beat_sequencer_envelope.h"
+#include "audio/envelope_generators/lfo_envelope_generator.h"
+#include "animation_rig/animation_rig.h"
+#include "animation_rig/animation_sequence.h"
+#include "animation_rig/animation_sequence_move.h"
 
 using namespace godot;
 
@@ -21,11 +25,16 @@ void initialize_music_video_generator_module(ModuleInitializationLevel p_level)
         GDREGISTER_ABSTRACT_CLASS(EnvelopeGenerator);
         GDREGISTER_CLASS(DualEnvelopeTransientGenerator);
         GDREGISTER_CLASS(BeatSequencerEnvelope);
+        GDREGISTER_CLASS(LFOEnvelopeGenerator);
         // UtilityFunctions::print("Music Video Generator module initialized.");
-
 
         //Rendering
         GDREGISTER_CLASS(RayMarchingCamera);
+
+        //Animation rig
+        GDREGISTER_ABSTRACT_CLASS(AnimationSequence);
+        GDREGISTER_CLASS(AnimationSequenceMove);
+        GDREGISTER_CLASS(AnimationRig);
     }
 }
 

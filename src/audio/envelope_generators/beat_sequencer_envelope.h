@@ -41,8 +41,10 @@ class BeatSequencerEnvelope : public EnvelopeGenerator
     float release_time;  // Duration (seconds) for the envelope to decay.
     float envelope;      // Current envelope value (range 0 to 1).
 
-    float time_since_last_beat;
+    float time_stamp_last_beat;
+    float time_elapsed;
     int current_beat_index;
+    int global_beat_index;
 
     EnvelopePhase envelope_phase = EnvelopePhase::ENVELOPE_IDLE;
     float phase_timer = 0.0f;
