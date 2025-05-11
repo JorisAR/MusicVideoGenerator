@@ -46,10 +46,6 @@ layout(std430, set = 1, binding = 2) restrict buffer MusicData {
 #include "primitives.glsl"
 #include "scenes.glsl"
 
-float sdScene(in vec3 p) {
-    return sdLinesScene(p);
-}
-
 // ----------------------------------- CONE MARCH FUNCTION -----------------------------------
 
 float cone_march(vec3 origin, vec3 direction, out int steps) {
@@ -59,7 +55,7 @@ float cone_march(vec3 origin, vec3 direction, out int steps) {
     
     for (int i = 0; i < MAX_CONE_MARCHING_STEPS && t < camera.far; i++) {
         vec3 p = origin + t * direction;
-        float dist = sdScene(p);
+        float dist = sdScene(p).d;
         float coneRadius = max(0.005, t * pixelConeAngle);
         
         if (dist < coneRadius) {

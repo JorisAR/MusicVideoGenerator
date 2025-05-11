@@ -63,9 +63,7 @@ func _process(_delta):
 			max_values[i] = lerp(max_values[i], height, ANIMATION_SPEED)
 		if height <= 0.0:
 			min_values[i] = lerp(min_values[i], 0.0, ANIMATION_SPEED)
-
 	queue_redraw()
-
 
 func _ready():
 	SIZE = reference_node.scale

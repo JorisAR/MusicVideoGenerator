@@ -51,10 +51,6 @@ layout(std430, set = 1, binding = 2) restrict buffer MusicData {
 #include "primitives.glsl"
 #include "scenes.glsl"
 
-float sdScene(in vec3 p) {
-    return sdLinesScene(p);
-    // return sdSphere(p, 2.0);
-}
 
 // ----------------------------------- FUNCTIONS -----------------------------------
 
@@ -105,22 +101,25 @@ vec3 geometry_color(const vec3 position) {
     }
 }
 
-float ray_march(vec3 origin, vec3 direction, out float min_t, out int steps) {
-    float t = 0.0f;
+SDFResult ray_march(vec3 origin, vec3 direction, out float min_t, out int steps) {
+    SDFResult result;
+    result.d = 0.0f;
     min_t = camera.far;
-    for (int i = 0; i < MAX_RAY_MARCHING_STEPS && t < camera.far; i++) {
-        vec3 p = origin + t * direction;
-        float dist = sdScene(p);
-        min_t = min(min_t, dist);
-        if (dist < 0.001) {
+    for (int i = 0; i < MAX_RAY_MARCHING_STEPS && result.d < camera.far; i++) {
+        vec3 p = origin + result.d * direction;
+        SDFResult sceneResult = sdScene(p);
+        min_t = min(min_t, sceneResult.d);
+        if (sceneResult.d < 0.001) {
             steps = i;
-            return t;
+            result.color = sceneResult.color;
+            return result;
         }
-        t += dist;
+        result.d += sceneResult.d;
     }
 
     steps = MAX_RAY_MARCHING_STEPS;
-    return -1;
+    result.d = -1;
+    return result;
 }
 
 // ----------------------------------- LIGHTING FUNCTIONS -----------------------------------
@@ -153,7 +152,7 @@ vec3 calculateNormal( in vec3 point ) // for function f(p)
     for( int i=0; i<4; i++ )
     {
         vec3 e = 0.5773*(2.0*vec3((((i+3)>>1)&1),((i>>1)&1),(i&1))-1.0);
-        n += e*sdScene(point+e*h).x;
+        n += e*sdScene(point+e*h).d;
     }
     return normalize(n);
 }
@@ -164,7 +163,7 @@ float softshadow(in vec3 ro, in vec3 rd, float k)
     float t = 0.01;
     for (int i=0; i<50 && t<100; i++)
     {
-        float h = sdScene(ro + rd*t);
+        float h = sdScene(ro + rd*t).d;
         if (h<0.001)
         return 0.0;
         res = min(res, k*h/t);
@@ -205,10 +204,11 @@ void main() {
     int steps = 0;
     float min_t = camera.far;
 
-    float t = ray_march(ray_origin, ray_dir, min_t, steps);
+    SDFResult result = ray_march(ray_origin, ray_dir, min_t, steps);
+    float t = result.d;
 
     vec3 sky_color = vec3(music_data.raw.x);// vec3(0.0, 0.0, 0.0);
-    vec3 color = vec3(music_data.raw.x);
+    vec3 color = result.color;
 
     if (t >= 0.0) {
         vec3 hitPos = ray_origin + t * ray_dir;
@@ -218,8 +218,8 @@ void main() {
         // shadow = 1.0f;
         // float linear_depth = (t - camera.near) / (camera.far - camera.near);
         // color = phongShading(camera.position.xyz, hitPos, normal, directional_light);
-        color = vec3(1.0);
-        color = geometry_color(hitPos);
+        // color = vec3(1.0);
+        // color = geometry_color(hitPos);
         color *= (1 - steps / float(MAX_RAY_MARCHING_STEPS));
         // color = mix(color, sky_color, pow(linear_depth, 1.0));
     } else {

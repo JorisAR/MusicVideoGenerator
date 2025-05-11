@@ -6,8 +6,9 @@ vec2 offset(vec2 q, float p) {
     return q;
 }
 
-float sdLinesScene(in vec3 p)
+SDFResult sdGrid(in vec3 p)
 {
+    SDFResult res;
     const float period = 5.0; 
     float halfThickness = 0.5 + 0.25 * music_data.raw.x;    
 
@@ -19,8 +20,25 @@ float sdLinesScene(in vec3 p)
         d = min(d, sdBox2D(offset(vec2(q.x, q.z) + offsets[i], p.z), vec2(halfThickness)));
         d = min(d, sdBox2D(offset(vec2(q.x, q.y) + offsets[i], p.z), vec2(halfThickness)));
     }
+    res.d = d;
+    res.color = vec3(0.5, 0.5, 0.5);
+    return res;
+}
 
-    return d;
+SDFResult sdComplexGrid(in vec3 p)
+{    
+    SDFResult box;
+    box.d = sdBox(p, vec3(40.0));
+    box.color = vec3(0.5, 0.5, 1.0);
+    SDFResult sphere;
+    sphere.d = sdSphere(p, 20.0);
+    sphere.color = vec3(1.0, 0.5, 0.5);
+    SDFResult grid = sdGrid(p);
+
+
+    SDFResult res = opSmoothDifferenceSDF(sdGrid(p), box, 2.0);
+    res = opSmoothUnionSDF(res, sphere, 0.5);
+    return res;
 }
 
 float sdMengerScene(in vec3 p)
@@ -49,6 +67,17 @@ float sdMengerScene(in vec3 p)
     }
 
     return res.x;
+}
+
+//the one we use
+
+SDFResult sdScene(in vec3 p) {
+    // SDFResult res;
+    // float d = sdSphere(p, 2.0);
+    // res.color = vec3(0.5, 0.5, 0.5);
+    // return res;
+    return sdComplexGrid(p);
+    // return sdSphere(p, 2.0);
 }
 
 
