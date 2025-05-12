@@ -49,6 +49,7 @@ layout(std430, set = 1, binding = 2) restrict buffer MusicData {
 // ----------------------------------- SHAPES -----------------------------------
 
 #include "primitives.glsl"
+#include "fbm.glsl"
 #include "scenes.glsl"
 
 
@@ -191,8 +192,8 @@ void main() {
     vec3 ray_origin = camera.position.xyz;
     vec3 ray_dir = normalize(world_pos.xyz - ray_origin);
 
-    float init_t = imageLoad(coneBuffer, ivec2(clamp(pos * params.cone_resolution_scale, vec2(0), vec2(params.cone_resolution_scale * params.width - 1, params.cone_resolution_scale * params.height - 1)))).r;
-    
+    vec4 cone = imageLoad(coneBuffer, ivec2(clamp(pos * params.cone_resolution_scale, vec2(0), vec2(params.cone_resolution_scale * params.width - 1, params.cone_resolution_scale * params.height - 1))));
+    float init_t = cone.x;
     ray_origin += ray_dir * max(init_t, camera.near);
 
     // imageStore(outputImage, pos, vec4(vec3(init_t), 1.0));
@@ -200,14 +201,15 @@ void main() {
 
     // Define a simple directional light (e.g., coming from (1, 1, 1)).
     vec3 directional_light = normalize(vec3(1.0, 1.0, 1.0));
-
-    int steps = 0;
+    
+    int steps = int(cone.y);
     float min_t = camera.far;
 
     SDFResult result = ray_march(ray_origin, ray_dir, min_t, steps);
     float t = result.d;
 
-    vec3 sky_color = vec3(music_data.raw.x);// vec3(0.0, 0.0, 0.0);
+    // vec3 sky_color = vec3(music_data.raw.x);
+    vec3 sky_color =  vec3(0.0, 0.0, 0.0);
     vec3 color = result.color;
 
     if (t >= 0.0) {

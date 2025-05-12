@@ -27,17 +27,12 @@ SDFResult sdGrid(in vec3 p)
 
 SDFResult sdComplexGrid(in vec3 p)
 {    
-    SDFResult box;
-    box.d = sdBox(p, vec3(40.0));
-    box.color = vec3(0.5, 0.5, 1.0);
-    SDFResult sphere;
-    sphere.d = sdSphere(p, 20.0);
-    sphere.color = vec3(1.0, 0.5, 0.5);
+    SDFResult box = sdfResult(sdBox(p, vec3(40.0)), vec3(0.5, 0.5, 1.0));
+    SDFResult sphere = sdfResult(sdSphere(p, 20.0), vec3(1.0, 0.5, 0.5));
     SDFResult grid = sdGrid(p);
 
-
-    SDFResult res = opSmoothDifferenceSDF(sdGrid(p), box, 2.0);
-    res = opSmoothUnionSDF(res, sphere, 0.5);
+    SDFResult res = smoothDifference(sdGrid(p), box, 2.0);
+    res = smoothUnion(res, sphere, 0.5);
     return res;
 }
 
@@ -72,11 +67,13 @@ float sdMengerScene(in vec3 p)
 //the one we use
 
 SDFResult sdScene(in vec3 p) {
-    // SDFResult res;
-    // float d = sdSphere(p, 2.0);
-    // res.color = vec3(0.5, 0.5, 0.5);
-    // return res;
-    return sdComplexGrid(p);
+    // p *= 0.1;
+    // float d = sdPlane(p, vec3(0.0, 1.0, 0.0), 0.0);
+    // d = sdFbm(p, d, 4);
+    // return sdfResult(d, vec3(0.0, 1.0, 1.0));
+
+    return smoothUnion(sdfResult(sdBox(p + vec3(0,10,0), vec3(10)), vec3(0.5)), sdfResult(sdSphere(p, 10.0), vec3(5.0, 0.5, 1.0)), 2.0);
+    // return sdComplexGrid(p);
     // return sdSphere(p, 2.0);
 }
 

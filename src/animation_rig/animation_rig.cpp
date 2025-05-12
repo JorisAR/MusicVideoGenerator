@@ -48,12 +48,18 @@ void AnimationRig::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_randomize_order"), &AnimationRig::get_randomize_order);
     ClassDB::bind_method(D_METHOD("set_randomize_order", "value"), &AnimationRig::set_randomize_order);
 
+    ClassDB::bind_method(D_METHOD("set_enabled", "value"), &AnimationRig::set_enabled);
+    ClassDB::bind_method(D_METHOD("get_enabled"), &AnimationRig::get_enabled);
+
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "enabled"), "set_enabled", "get_enabled");
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "randomize_sequence_order"), "set_randomize_order", "get_randomize_order");
+
     ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "song_settings", PROPERTY_HINT_RESOURCE_TYPE, "SongSettings"),
                  "set_song_settings", "get_song_settings");
     ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "animation_sequences", PROPERTY_HINT_TYPE_STRING, String::num(Variant::OBJECT) + "/" + String::num(PROPERTY_HINT_RESOURCE_TYPE) + ":AnimationSequence"),
                  "set_animation_sequences", "get_animation_sequences");
 
-    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "randomize_sequence_order"), "set_randomize_order", "get_randomize_order");
+
 }
 
 void AnimationRig::init() {
@@ -66,6 +72,9 @@ void AnimationRig::init() {
 }
 
 void AnimationRig::update(const float delta) {
+    if(!enabled)
+        return;
+
     if (song_settings.is_null()) {
         UtilityFunctions::print("Song settings not set!");
         return;
@@ -118,6 +127,14 @@ void AnimationRig::set_randomize_order(const bool value)
 bool AnimationRig::get_randomize_order() const
 {
     return randomize_order;
+}
+
+void AnimationRig::set_enabled(const bool value) {
+    enabled = value;
+}
+
+bool AnimationRig::get_enabled() const {
+    return enabled;
 }
 
 void AnimationRig::set_animation_sequences(const TypedArray<Ref<AnimationSequence>> &seqs) {

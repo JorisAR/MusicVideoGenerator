@@ -6,6 +6,7 @@
 #include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/classes/image.hpp>
 #include <godot_cpp/classes/image_texture.hpp>
+#include <godot_cpp/classes/texture2drd.hpp>
 #include <godot_cpp/classes/node3d.hpp>
 #include <godot_cpp/classes/rd_texture_format.hpp>
 #include <godot_cpp/classes/rd_texture_view.hpp>
@@ -148,7 +149,8 @@ class RayMarchingCamera : public Node3D
     Ref<Image> output_image;
     Ref<Image> depth_image;
     Ref<Image> cone_image;
-    Ref<ImageTexture> output_texture;
+    // Ref<ImageTexture> output_texture;
+    Ref<Texture2DRD> output_texture;
 
     ConeMarchingParameters cone_marching_parameters;
     RenderParameters render_parameters;

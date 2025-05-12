@@ -20,6 +20,11 @@ float sdSphere( vec3 p, float r )
     return length(p) - r;
 }
 
+float sdPlane( vec3 p, vec3 n, float h )
+{
+  return dot(p,n) + h;
+}
+
 float sdBox( vec3 p, vec3 b )
 {
     vec3 q = abs(p) - b;
@@ -51,17 +56,17 @@ float opDifference( float d1, float d2 ) {
 }
 
 // Smooth blending functions
-float opSmoothUnion( float d1, float d2, float k ) {
+float smoothUnion( float d1, float d2, float k ) {
     float h = clamp( 0.5 + 0.5*(d2 - d1)/k, 0.0, 1.0 );
     return mix(d2, d1, h) - k * h * (1.0 - h);
 }
 
-float opSmoothIntersection( float d1, float d2, float k ) {
-    return -opSmoothUnion(-d1, -d2, k);
+float smoothIntersection( float d1, float d2, float k ) {
+    return -smoothUnion(-d1, -d2, k);
 }
 
-float opSmoothDifference( float d1, float d2, float k ) {
-    return opSmoothIntersection(d1, -d2, k);
+float smoothDifference( float d1, float d2, float k ) {
+    return smoothIntersection(d1, -d2, k);
 }
 
 // Colors
@@ -70,7 +75,14 @@ struct SDFResult {
     vec3 color;
 };
 
-SDFResult opSmoothUnionSDF(SDFResult a, SDFResult b, float k) {
+SDFResult sdfResult(float d, vec3 color) {
+    SDFResult result;
+    result.d = d;
+    result.color = color;
+    return result;
+}
+
+SDFResult smoothUnion(SDFResult a, SDFResult b, float k) {
     float h = clamp(0.5 + 0.5 * (b.d - a.d) / k, 0.0, 1.0);
     SDFResult result;
     result.d = mix(b.d, a.d, h) - k * h * (1.0 - h);
@@ -78,7 +90,7 @@ SDFResult opSmoothUnionSDF(SDFResult a, SDFResult b, float k) {
     return result;
 }
 
-SDFResult opSmoothIntersectionSDF(SDFResult a, SDFResult b, float k) {
+SDFResult smoothIntersection(SDFResult a, SDFResult b, float k) {
     float h = clamp(0.5 + 0.5 * ((-b.d) - (-a.d)) / k, 0.0, 1.0);
     SDFResult result;
     result.d = - (mix(-b.d, -a.d, h) - k * h * (1.0 - h));
@@ -86,11 +98,11 @@ SDFResult opSmoothIntersectionSDF(SDFResult a, SDFResult b, float k) {
     return result;
 }
 
-SDFResult opSmoothDifferenceSDF(SDFResult a, SDFResult b, float k) {
+SDFResult smoothDifference(SDFResult a, SDFResult b, float k) {
     SDFResult negB;
     negB.d = -b.d;
     negB.color = b.color;
-    return opSmoothIntersectionSDF(a, negB, k);
+    return smoothIntersection(a, negB, k);
 }
 
 #endif // PRIMITIVES_GLSL

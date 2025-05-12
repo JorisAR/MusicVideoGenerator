@@ -40,6 +40,9 @@ public:
     void set_randomize_order(const bool value);
     bool get_randomize_order() const;
 
+    void set_enabled(const bool value);
+    bool get_enabled() const;
+
 protected:
     void _notification(int what);
     static void _bind_methods();
@@ -58,6 +61,7 @@ private:
     
 
     bool randomize_order = false;
+    bool enabled = true;
 
     Ref<RandomNumberGenerator> rng;
 };

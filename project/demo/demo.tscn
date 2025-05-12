@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3 uid="uid://s8dmi2g1hu2t"]
+[gd_scene load_steps=16 format=3 uid="uid://s8dmi2g1hu2t"]
 
 [ext_resource type="Script" uid="uid://bpaijq7jcidqq" path="res://demo/movable_camera.gd" id="1_d6po2"]
 [ext_resource type="AudioStream" uid="uid://cqyh43s2sr7w6" path="res://demo/assets/Lightrays (mastered).mp3" id="2_j5lb4"]
@@ -14,8 +14,6 @@ end_position = Vector3(0, 10, 0)
 look_at_enabled = true
 look_at_position = Vector3(10, 0, 0)
 
-[sub_resource type="ImageTexture" id="ImageTexture_5hjng"]
-
 [sub_resource type="BeatSequencerEnvelope" id="BeatSequencerEnvelope_u10mr"]
 
 [sub_resource type="LFOEnvelopeGenerator" id="LFOEnvelopeGenerator_u10mr"]
@@ -25,7 +23,10 @@ phase_bars = 0.5
 
 [sub_resource type="Environment" id="Environment_j5lb4"]
 background_mode = 3
+background_canvas_max_layer = 100
 glow_enabled = true
+glow_normalized = true
+glow_blend_mode = 4
 
 [sub_resource type="CanvasTexture" id="CanvasTexture_j5lb4"]
 
@@ -48,14 +49,17 @@ noise = SubResource("FastNoiseLite_u10mr")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -32, 0, -24)
 
 [node name="AnimationRig" type="AnimationRig" parent="Camera"]
+enabled = false
+randomize_sequence_order = true
 song_settings = ExtResource("2_u10mr")
 animation_sequences = Array[AnimationSequence]([SubResource("AnimationSequenceMove_u10mr"), SubResource("AnimationSequenceMove_onu7k")])
-randomize_sequence_order = true
 transform = Transform3D(1, 0, 0, 0, 1, -9.31323e-10, 0, 9.31323e-10, 1, 0, 0, -25)
 
 [node name="RayMarchingCamera" type="RayMarchingCamera" parent="Camera/AnimationRig" node_paths=PackedStringArray("output_texture", "music_manager")]
 output_texture = NodePath("TextureRect")
 music_manager = NodePath("../../../MusicManager")
+far_plane = 100.0
+cone_resolution_scale = 20
 transform = Transform3D(1, 0, 0, 0, 0.999956, 0.00938973, 0, -0.00938973, 0.999956, 0, 0, 0)
 script = ExtResource("1_d6po2")
 
@@ -65,7 +69,6 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-texture = SubResource("ImageTexture_5hjng")
 
 [node name="MusicManager" type="MusicManager" parent="." node_paths=PackedStringArray("audio_stream_player")]
 audio_stream_player = NodePath("AudioStreamPlayer")

@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://vha6oid7ym8u"
+path="res://.godot/imported/fbm.glsl-79e87648118f8d7ed741de5f798fd749.res"
+
+[deps]
+
+source_file="res://addons/music_video_generator/src/shaders/fbm.glsl"
+dest_files=["res://.godot/imported/fbm.glsl-79e87648118f8d7ed741de5f798fd749.res"]
+
+[params]
+

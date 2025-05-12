@@ -44,6 +44,7 @@ layout(std430, set = 1, binding = 2) restrict buffer MusicData {
 // ----------------------------------- SHAPES -----------------------------------
 
 #include "primitives.glsl"
+#include "fbm.glsl"
 #include "scenes.glsl"
 
 // ----------------------------------- CONE MARCH FUNCTION -----------------------------------
