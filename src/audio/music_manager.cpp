@@ -44,8 +44,21 @@ Ref<SongSettings> MusicManager::get_song_settings() const {
 }
 
 
-Vector4 MusicManager::get_raw_magnitude_data() const {
-    return raw_magnitude_data;
+Vector4 MusicManager::get_current_magnitude_data() const {
+    return current_magnitude_data;
+}
+
+Vector4 MusicManager::get_cumulative_magnitude_data() const {
+    return cumulative_magnitude_data;
+}
+
+PackedFloat32Array MusicManager::get_spectrum_data() const
+{
+    return spectrum_data;
+}
+
+void MusicManager::set_spectrum_data(const PackedFloat32Array value)
+{
 }
 
 void MusicManager::_bind_methods() {
@@ -64,6 +77,34 @@ void MusicManager::_bind_methods() {
     ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "envelope_generators", PROPERTY_HINT_TYPE_STRING, String::num(Variant::OBJECT) + "/" + String::num(PROPERTY_HINT_RESOURCE_TYPE) + ":EnvelopeGenerator"),
                  "set_envelope_generators", "get_envelope_generators");
 
+    ADD_GROUP("Spectrum Settings", "spectrum_");
+    ClassDB::bind_method(D_METHOD("set_spectrum_size", "value"), &MusicManager::set_spectrum_size);
+    ClassDB::bind_method(D_METHOD("get_spectrum_size"), &MusicManager::get_spectrum_size);
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "spectrum_size"), "set_spectrum_size", "get_spectrum_size");
+
+    ClassDB::bind_method(D_METHOD("set_spectrum_log_x_axis", "value"), &MusicManager::set_spectrum_log_x_axis);
+    ClassDB::bind_method(D_METHOD("get_spectrum_log_x_axis"), &MusicManager::get_spectrum_log_x_axis);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "spectrum_log_x_axis"), "set_spectrum_log_x_axis", "get_spectrum_log_x_axis");
+
+    ClassDB::bind_method(D_METHOD("set_spectrum_db_octave_slope", "value"), &MusicManager::set_spectrum_db_octave_slope);
+    ClassDB::bind_method(D_METHOD("get_spectrum_db_octave_slope"), &MusicManager::get_spectrum_db_octave_slope);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "spectrum_db_octave_slope"), "set_spectrum_db_octave_slope", "get_spectrum_db_octave_slope");
+
+    ClassDB::bind_method(D_METHOD("set_spectrum_frequency_min", "value"), &MusicManager::set_spectrum_frequency_min);
+    ClassDB::bind_method(D_METHOD("get_spectrum_frequency_min"), &MusicManager::get_spectrum_frequency_min);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "spectrum_frequency_min"), "set_spectrum_frequency_min", "get_spectrum_frequency_min");
+
+    ClassDB::bind_method(D_METHOD("set_spectrum_frequency_max", "value"), &MusicManager::set_spectrum_frequency_max);
+    ClassDB::bind_method(D_METHOD("get_spectrum_frequency_max"), &MusicManager::get_spectrum_frequency_max);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "spectrum_frequency_max"), "set_spectrum_frequency_max", "get_spectrum_frequency_max");
+
+    // Bind spectrum-related functions.
+    ClassDB::bind_method(D_METHOD("set_spectrum_data", "value"), &MusicManager::set_spectrum_data);
+    ClassDB::bind_method(D_METHOD("get_spectrum_data"), &MusicManager::get_spectrum_data);
+    ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT32_ARRAY, "spectrum_data"), "set_spectrum_data", "get_spectrum_data");
+
+    ClassDB::bind_method(D_METHOD("get_current_magnitude_data"), &MusicManager::get_current_magnitude_data);
+    ClassDB::bind_method(D_METHOD("get_cumulative_magnitude_data"), &MusicManager::get_cumulative_magnitude_data);
 }
 
 void MusicManager::_notification(int p_what) {
@@ -114,12 +155,47 @@ void MusicManager::init() {
         UtilityFunctions::printerr("No valid spectrum analyzer found on the bus.");
     }
 
+    //init spectrum
+    spectrum_data.resize(spectrum_size);
+
     for (int i = 0; i < envelope_generators.size(); ++i) {
         Ref<EnvelopeGenerator> generator = envelope_generators[i];
         if (generator.is_valid()) {
             generator->init(song_settings); 
         }
     }
+}
+
+float MusicManager::apply_slope(float frequency, float value) {
+    const float gain_per_octave = std::pow(10, 4.5 / 20.0);
+    float octaves_above = std::log2(frequency / spectrum_frequency_min);
+    float gain = std::pow(gain_per_octave, octaves_above);
+    return value * gain;
+}
+
+void MusicManager::update_spectrum() {
+    const float MIN_DB = 60.f;
+    const int barcount = spectrum_data.size();
+    float prev_f = spectrum_frequency_min;
+
+    for (size_t i = 0; i < barcount; i++)
+    {
+        float f = 0.0f;
+        if(spectrum_log_x_axis)
+            f = spectrum_frequency_min * std::pow(2.0f, std::log2(spectrum_frequency_max / spectrum_frequency_min) * float(i + 1) / float(barcount));
+        else
+            f = (1 + i) * (spectrum_frequency_max - spectrum_frequency_min) / barcount + spectrum_frequency_min;
+        float magnitude = spectrum->get_magnitude_for_frequency_range(prev_f, f, AudioEffectSpectrumAnalyzerInstance::MAGNITUDE_MAX).length();
+        prev_f = f;
+        magnitude = apply_slope(f, magnitude);        
+        // spectrum_data[i] = (MIN_DB + static_cast<float>(UtilityFunctions::linear_to_db(magnitude)) / MIN_DB);//Math::clamp(, 0.f, 1.f);
+        magnitude = Math::clamp((MIN_DB + static_cast<float>(UtilityFunctions::linear_to_db(magnitude))) / MIN_DB, 0.f, 1.f);
+
+        if (magnitude > spectrum_data[i])
+            spectrum_data[i] = magnitude;
+        else
+            spectrum_data[i] = Math::lerp(spectrum_data[i], magnitude, 0.1f);        
+    }    
 }
 
 //
@@ -129,54 +205,57 @@ void MusicManager::update(const float delta) {
     if (!audio_stream_player || !spectrum.is_valid()) {
         return;
     }
+
+    update_spectrum();
+
     int count = envelope_generators.size();
     for (int i = 0; i < envelope_generators.size(); ++i) {
         Ref<EnvelopeGenerator> generator = envelope_generators[i];
         if (generator.is_valid() && i < 4) {
-            raw_magnitude_data[i] = generator->process(delta); 
+            current_magnitude_data[i] = generator->process(delta); 
         }
+        cumulative_magnitude_data[i] += current_magnitude_data[i] * delta;
     }
-    
-    
-    /*
-    // Retrieve high-frequency energy (e.g., 16kHz to 20kHz).
-    Vector2 data = spectrum->get_magnitude_for_frequency_range(16000, 20000);
-    float raw_value = data.length();
+}
 
-    //
-    // Update the fast envelope so that it quickly follows the raw high-freq changes.
-    //
-    const float fastAttackAlpha = 0.3f;   // Fast rise
-    const float fastReleaseAlpha = 0.3f;  // Also a fast release for prompt tracking
-    if (raw_value > fast_env) {
-        fast_env = Math::lerp(fast_env, raw_value, fastAttackAlpha);
-    } else {
-        fast_env = Math::lerp(fast_env, raw_value, fastReleaseAlpha);
-    }
+void MusicManager::set_spectrum_size(int value)
+{
+    spectrum_size = Math::clamp(value, 0, MAX_SPECTRUM_SIZE);
+}
 
-    //
-    // Update the slow envelope so that it follows changes very gradually.
-    //
-    const float slowAlpha = 0.1f; // Very slow adaptation: holds an average of the high frequencies.
-    slow_env = Math::lerp(slow_env, raw_value, slowAlpha);
+int MusicManager::get_spectrum_size() const
+{
+    return spectrum_size;
+}
 
-    //
-    // Peak detection: if the fast envelope exceeds the slow envelope by a target difference,
-    // trigger a transient detection.
-    //
-    const float thresholdDelta = 0.9f; // Change this value to tune detection sensitivity.
-    const float d = Math::abs(fast_env - slow_env) / Math::abs(fast_env + slow_env);
-    if (d > thresholdDelta) {
-        transient_value = 1.0f;
-    }
+void MusicManager::set_spectrum_log_x_axis(bool value) {
+    spectrum_log_x_axis = value;
+}
 
-    //
-    // Decay the transient detection envelope smoothly.
-    //
-    transient_value = Math::lerp(transient_value, 0.0f, 0.05f);
+bool MusicManager::get_spectrum_log_x_axis() const {
+    return spectrum_log_x_axis;
+}
 
-    //
-    // Output the final envelope value.
-    //
-    raw_magnitude_data[0] = transient_value;*/
+void MusicManager::set_spectrum_db_octave_slope(float value) {
+    spectrum_db_octave_slope = value;
+}
+
+float MusicManager::get_spectrum_db_octave_slope() const {
+    return spectrum_db_octave_slope;
+}
+
+void MusicManager::set_spectrum_frequency_min(float value) {
+    spectrum_frequency_min = value;
+}
+
+float MusicManager::get_spectrum_frequency_min() const {
+    return spectrum_frequency_min;
+}
+
+void MusicManager::set_spectrum_frequency_max(float value) {
+    spectrum_frequency_max = value;
+}
+
+float MusicManager::get_spectrum_frequency_max() const {
+    return spectrum_frequency_max;
 }

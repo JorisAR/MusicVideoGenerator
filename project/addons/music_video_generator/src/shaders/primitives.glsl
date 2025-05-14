@@ -71,38 +71,72 @@ float smoothDifference( float d1, float d2, float k ) {
 
 // Colors
 struct SDFResult {
-    float d;
     vec3 color;
+    float d;    
+    float reflectivity;
+    float alpha;
 };
 
 SDFResult sdfResult(float d, vec3 color) {
     SDFResult result;
     result.d = d;
+    result.reflectivity = 0.0;
+    result.alpha = 1.0;
     result.color = color;
     return result;
 }
 
+SDFResult mix(SDFResult a, SDFResult b, float t) {
+    SDFResult result;
+    result.d = mix(a.d, b.d, t);
+    result.color = mix(a.color, b.color, t);
+    result.reflectivity = mix(a.reflectivity, b.reflectivity, t);
+    result.alpha = mix(a.alpha, b.alpha, t);
+    return result;
+}
+
+SDFResult mixProperties(SDFResult a, SDFResult b, float t) {
+    SDFResult result;
+    result.color = mix(a.color, b.color, t);
+    result.reflectivity = mix(a.reflectivity, b.reflectivity, t);
+    result.alpha = mix(a.alpha, b.alpha, t);
+    return result;
+}
+
+
 SDFResult smoothUnion(SDFResult a, SDFResult b, float k) {
     float h = clamp(0.5 + 0.5 * (b.d - a.d) / k, 0.0, 1.0);
-    SDFResult result;
+    SDFResult result = mixProperties(b,a,h);
     result.d = mix(b.d, a.d, h) - k * h * (1.0 - h);
-    result.color = mix(b.color, a.color, h);
     return result;
 }
 
 SDFResult smoothIntersection(SDFResult a, SDFResult b, float k) {
     float h = clamp(0.5 + 0.5 * ((-b.d) - (-a.d)) / k, 0.0, 1.0);
-    SDFResult result;
+    SDFResult result = mixProperties(b,a,h);
     result.d = - (mix(-b.d, -a.d, h) - k * h * (1.0 - h));
-    result.color = mix(b.color, a.color, h);
     return result;
 }
 
 SDFResult smoothDifference(SDFResult a, SDFResult b, float k) {
-    SDFResult negB;
-    negB.d = -b.d;
-    negB.color = b.color;
-    return smoothIntersection(a, negB, k);
+    float h = clamp(0.5 + 0.5 * ((b.d) - (-a.d)) / k, 0.0, 1.0);
+    SDFResult result = mixProperties(b,a,h);
+    result.d = - (mix(b.d, -a.d, h) - k * h * (1.0 - h));
+    return result;
+}
+
+// ------------------------------------------------ Utils ------------------------------------------------
+
+vec3 hsv2rgb(vec3 c) {
+  vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+  vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+  return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
+vec3 gridColoring(vec3 pos, vec3 a, vec3 b)
+{
+    bool c = (int(floor(pos.x)) % 2 == 0) ^^ (int(floor(pos.y)) % 2 == 0) ^^ (int(floor(pos.z)) % 2 == 0);
+    return c ? a : b;
 }
 
 #endif // PRIMITIVES_GLSL

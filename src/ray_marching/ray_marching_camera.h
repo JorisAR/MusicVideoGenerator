@@ -80,7 +80,10 @@ class RayMarchingCamera : public Node3D
 
     struct MusicData
     {
-        Vector4 data;
+        Vector4 current_magnitude_data;
+        Vector4 cumulative_magnitude_data;
+        float spectrum[MusicManager::MAX_SPECTRUM_SIZE];
+        int spectrum_count;
 
         PackedByteArray to_packed_byte_array()
         {

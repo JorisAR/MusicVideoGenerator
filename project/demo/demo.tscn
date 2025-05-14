@@ -1,10 +1,11 @@
-[gd_scene load_steps=16 format=3 uid="uid://s8dmi2g1hu2t"]
+[gd_scene load_steps=18 format=3 uid="uid://s8dmi2g1hu2t"]
 
 [ext_resource type="Script" uid="uid://bpaijq7jcidqq" path="res://demo/movable_camera.gd" id="1_d6po2"]
 [ext_resource type="AudioStream" uid="uid://cqyh43s2sr7w6" path="res://demo/assets/Lightrays (mastered).mp3" id="2_j5lb4"]
+[ext_resource type="Script" uid="uid://dubmrojapyqru" path="res://demo/camera_shake.gd" id="2_onu7k"]
 [ext_resource type="SongSettings" uid="uid://dvt7bjcj2njsj" path="res://demo/demo_song_settings.tres" id="2_u10mr"]
 [ext_resource type="Script" uid="uid://c1tfxgs78pijt" path="res://demo/fps_meter.gd" id="3_dar0o"]
-[ext_resource type="Script" uid="uid://d18hlgoh6wc1" path="res://addons/music_video_generator/src/spectrum/spectrum.gd" id="4_j5lb4"]
+[ext_resource type="Script" uid="uid://dka0quv7b7ojv" path="res://addons/music_video_generator/src/spectrum/simple_spectrum.gd.gd" id="6_onu7k"]
 
 [sub_resource type="AnimationSequenceMove" id="AnimationSequenceMove_u10mr"]
 end_position = Vector3(0, 0, 10)
@@ -13,6 +14,8 @@ end_position = Vector3(0, 0, 10)
 end_position = Vector3(0, 10, 0)
 look_at_enabled = true
 look_at_position = Vector3(10, 0, 0)
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_onu7k"]
 
 [sub_resource type="BeatSequencerEnvelope" id="BeatSequencerEnvelope_u10mr"]
 
@@ -24,6 +27,7 @@ phase_bars = 0.5
 [sub_resource type="Environment" id="Environment_j5lb4"]
 background_mode = 3
 background_canvas_max_layer = 100
+tonemap_mode = 3
 glow_enabled = true
 glow_normalized = true
 glow_blend_mode = 4
@@ -46,24 +50,30 @@ noise = SubResource("FastNoiseLite_u10mr")
 [node name="Demo" type="Node3D"]
 
 [node name="Camera" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -32, 0, -24)
+transform = Transform3D(1, 0, 0, 0, 0.965926, 0.258819, 0, -0.258819, 0.965926, 0, 15, 0)
+script = ExtResource("1_d6po2")
 
 [node name="AnimationRig" type="AnimationRig" parent="Camera"]
 enabled = false
 randomize_sequence_order = true
 song_settings = ExtResource("2_u10mr")
 animation_sequences = Array[AnimationSequence]([SubResource("AnimationSequenceMove_u10mr"), SubResource("AnimationSequenceMove_onu7k")])
-transform = Transform3D(1, 0, 0, 0, 1, -9.31323e-10, 0, 9.31323e-10, 1, 0, 0, -25)
+transform = Transform3D(1, 0, 0, 0, 1, -9.31323e-10, 0, 9.31323e-10, 1, 0, 0, 0)
 
-[node name="RayMarchingCamera" type="RayMarchingCamera" parent="Camera/AnimationRig" node_paths=PackedStringArray("output_texture", "music_manager")]
+[node name="CameraGimbal" type="Node3D" parent="Camera/AnimationRig"]
+script = ExtResource("2_onu7k")
+enabled = false
+shake_amplitude = 5.0
+shake_frequency = 5.0
+noise = SubResource("FastNoiseLite_onu7k")
+
+[node name="RayMarchingCamera" type="RayMarchingCamera" parent="Camera/AnimationRig/CameraGimbal" node_paths=PackedStringArray("output_texture", "music_manager")]
 output_texture = NodePath("TextureRect")
-music_manager = NodePath("../../../MusicManager")
-far_plane = 100.0
-cone_resolution_scale = 20
-transform = Transform3D(1, 0, 0, 0, 0.999956, 0.00938973, 0, -0.00938973, 0.999956, 0, 0, 0)
-script = ExtResource("1_d6po2")
+music_manager = NodePath("../../../../MusicManager")
+far_plane = 2000.0
+cone_marching_enabled = false
 
-[node name="TextureRect" type="TextureRect" parent="Camera/AnimationRig/RayMarchingCamera"]
+[node name="TextureRect" type="TextureRect" parent="Camera/AnimationRig/CameraGimbal/RayMarchingCamera"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -74,6 +84,7 @@ grow_vertical = 2
 audio_stream_player = NodePath("AudioStreamPlayer")
 song_settings = ExtResource("2_u10mr")
 envelope_generators = Array[EnvelopeGenerator]([SubResource("BeatSequencerEnvelope_u10mr"), SubResource("LFOEnvelopeGenerator_u10mr")])
+spectrum_log_x_axis = false
 
 [node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="MusicManager"]
 stream = ExtResource("2_j5lb4")
@@ -85,17 +96,17 @@ offset_right = 40.0
 offset_bottom = 23.0
 script = ExtResource("3_dar0o")
 
-[node name="2DGlow" type="WorldEnvironment" parent="."]
+[node name="Environment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_j5lb4")
 
 [node name="Spectrum" type="Node2D" parent="."]
 modulate = Color(2, 2, 2, 1)
 
-[node name="Bars" type="Node2D" parent="Spectrum" node_paths=PackedStringArray("reference_node")]
+[node name="Bars" type="Node2D" parent="Spectrum" node_paths=PackedStringArray("reference_node", "music_manager")]
 position = Vector2(820, 685)
-script = ExtResource("4_j5lb4")
-bar_count = 128
+script = ExtResource("6_onu7k")
 reference_node = NodePath("BarsRange")
+music_manager = NodePath("../../MusicManager")
 
 [node name="BarsRange" type="Sprite2D" parent="Spectrum/Bars"]
 modulate = Color(1, 1, 1, 0)

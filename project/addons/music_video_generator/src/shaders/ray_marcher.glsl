@@ -1,7 +1,11 @@
 #[compute]
 #version 460
 
-#define MAX_RAY_MARCHING_STEPS 250
+#define MAX_RAY_MARCHING_STEPS 512
+
+#ifndef SCENE_ID
+#define SCENE_ID 4
+#endif
 
 // ----------------------------------- STRUCTS -----------------------------------
 
@@ -15,6 +19,8 @@ struct Ray {
     vec3 o;
     vec3 rD;
 };
+
+
 
 // ----------------------------------- GENERAL STORAGE -----------------------------------
 
@@ -42,8 +48,12 @@ layout(std430, set = 1, binding = 1) restrict buffer Camera {
 } camera;
 
 layout(std430, set = 1, binding = 2) restrict buffer MusicData {
-    vec4 raw;
+    vec4 current;
+    vec4 cumulative;
+    float spectrum[64];
+    int spectrum_count;
 } music_data;
+
 
 
 // ----------------------------------- SHAPES -----------------------------------
@@ -75,15 +85,21 @@ uvec2 prng_seed(vec2 pos, uint frame) {
     return seed * 0x9e3779b9u;
 }
 
+
 vec2 box_muller(vec2 rands) {
     float R = sqrt(-2.0f * log(rands.x));
     float theta = 6.2831853f * rands.y;
     return vec2(cos(theta), sin(theta));
 }
 
-vec3 sampleSky(const vec3 direction) {
+vec3 sampleSky(vec3 direction) {
     float t = 0.5 * (direction.y + 1.0);
+#if SCENE_ID == 1
+    return mix(0.05, 0.25, t) * vec3(0.2, 0.02, 0.3);
+#elif SCENE_ID == 2
     return mix(vec3(0.95), vec3(0.9, 0.94, 1.0), t) * 1.0f;
+#endif
+    return vec3(0.0);
 }
 
 vec3 geometry_color(const vec3 position) {
@@ -102,26 +118,29 @@ vec3 geometry_color(const vec3 position) {
     }
 }
 
-SDFResult ray_march(vec3 origin, vec3 direction, out float min_t, out int steps) {
-    SDFResult result;
-    result.d = 0.0f;
+SDFResult ray_march(vec3 origin, vec3 direction, out vec3 hit_position, out float min_t, out int steps) {
+    float t = 0.0;
     min_t = camera.far;
-    for (int i = 0; i < MAX_RAY_MARCHING_STEPS && result.d < camera.far; i++) {
-        vec3 p = origin + result.d * direction;
-        SDFResult sceneResult = sdScene(p);
-        min_t = min(min_t, sceneResult.d);
-        if (sceneResult.d < 0.001) {
-            steps = i;
-            result.color = sceneResult.color;
-            return result;
+    steps = 0;
+    
+    while (steps < MAX_RAY_MARCHING_STEPS && t < camera.far) {
+        steps++;
+        hit_position = origin + t * direction;
+        SDFResult sceneResult = sdScene(hit_position);
+        float d = sceneResult.d;
+        min_t = min(min_t, d);
+
+        if (d < 0.0001) {
+            // sceneResult.d = t;
+            return sceneResult;
         }
-        result.d += sceneResult.d;
+        t += d;
     }
 
-    steps = MAX_RAY_MARCHING_STEPS;
-    result.d = -1;
-    return result;
+    vec3 sky_color = steps >= MAX_RAY_MARCHING_STEPS ? vec3(0) : sampleSky(direction);
+    return sdfResult(-1.0, sky_color);
 }
+
 
 // ----------------------------------- LIGHTING FUNCTIONS -----------------------------------
 
@@ -145,9 +164,9 @@ vec3 phongShading(vec3 viewPos, vec3 hitPos, vec3 normal, vec3 lightDir) {
     return ambient + diffuse + specular;
 }
 
-vec3 calculateNormal( in vec3 point ) // for function f(p)
+vec3 calculateNormal( in vec3 point )
 {
-    const float h = 0.0001;      // replace by an appropriate value
+    const float h = 0.1;
 
     vec3 n = vec3(0.0);
     for( int i=0; i<4; i++ )
@@ -202,21 +221,32 @@ void main() {
     // Define a simple directional light (e.g., coming from (1, 1, 1)).
     vec3 directional_light = normalize(vec3(1.0, 1.0, 1.0));
     
-    int steps = int(cone.y);
+    int steps = 0;
     float min_t = camera.far;
 
-    SDFResult result = ray_march(ray_origin, ray_dir, min_t, steps);
-    float t = result.d;
+    vec3 hitPos = vec3(0.0);
+    SDFResult result = ray_march(ray_origin, ray_dir, hitPos, min_t, steps);
+    steps += int(cone.y); //add steps taken during cone marching
 
-    // vec3 sky_color = vec3(music_data.raw.x);
-    vec3 sky_color =  vec3(0.0, 0.0, 0.0);
+    float t = result.d;
+    
     vec3 color = result.color;
 
     if (t >= 0.0) {
-        vec3 hitPos = ray_origin + t * ray_dir;
+        // vec3 hitPos = ray_origin + t * ray_dir;
         vec3 normal = calculateNormal(hitPos);
-        // Offset the ray origin slightly along the normal for shadow testing.
-        float shadow = softshadow(hitPos + normal * 0.001, directional_light, 50.0);
+        // float shadow = softshadow(hitPos + normal * 0.001, directional_light, 50.0);
+
+        if(result.reflectivity > 0.0) {
+            vec3 reflectDir = reflect(ray_dir, normal);
+            int reflectSteps = 0;
+            vec3 reflectHitPos = vec3(0);
+            float reflectMinT = camera.far;
+            vec3 reflectedColor = ray_march(hitPos + normal * 0.001, reflectDir, reflectHitPos, reflectMinT, reflectSteps).color;
+            color =  mix(color, reflectedColor, result.reflectivity);
+        }
+
+
         // shadow = 1.0f;
         // float linear_depth = (t - camera.near) / (camera.far - camera.near);
         // color = phongShading(camera.position.xyz, hitPos, normal, directional_light);
@@ -224,9 +254,6 @@ void main() {
         // color = geometry_color(hitPos);
         color *= (1 - steps / float(MAX_RAY_MARCHING_STEPS));
         // color = mix(color, sky_color, pow(linear_depth, 1.0));
-    } else {
-        // Use the sky color if no surface is hit.
-        color = sky_color;
     }
 
     // Writing the final color and dummy depth.

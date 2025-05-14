@@ -1,7 +1,11 @@
 #[compute]
 #version 460
 
-#define MAX_CONE_MARCHING_STEPS 100
+#define MAX_CONE_MARCHING_STEPS 25
+
+#ifndef SCENE_ID
+#define SCENE_ID 3
+#endif
 
 // ----------------------------------- STRUCTS -----------------------------------
 
@@ -38,7 +42,10 @@ layout(std430, set = 1, binding = 1) restrict buffer Camera {
 } camera;
 
 layout(std430, set = 1, binding = 2) restrict buffer MusicData {
-    vec4 raw;
+    vec4 current;
+    vec4 cumulative;
+    float spectrum[64];
+    int spectrum_count;
 } music_data;
 
 // ----------------------------------- SHAPES -----------------------------------

@@ -186,7 +186,7 @@ void RayMarchingCamera::init()
                                                        near_plane, far_plane, false);
 
     // setup compute shader
-    std::vector<godot::String> args = {"#define scene_id " + scene_id}; // set scene name?
+    std::vector<godot::String> args = {};//{"#define SCENE_ID " + scene_id};
     ray_marching_shader =
         new ComputeShader("res://addons/music_video_generator/src/shaders/ray_marcher.glsl", _rd, args);
     if (cone_marching_enabled)
@@ -325,9 +325,17 @@ void RayMarchingCamera::render()
 
     // update music data
     {
-        Vector4 raw_magnitude_data = music_manager->get_raw_magnitude_data();
-        // PackedFloat32Array raw_magnitude_data = {0.5f};
-        music_data.data = Vector4(raw_magnitude_data[0], 0, 0, 0);
+        Vector4 current_magnitude_data = music_manager->get_current_magnitude_data();
+        Vector4 cumulative_magnitude_data = music_manager->get_cumulative_magnitude_data();
+        PackedFloat32Array spectrum_data = music_manager->get_spectrum_data();
+        music_data.spectrum_count = std::min(static_cast<int>(spectrum_data.size()), MusicManager::MAX_SPECTRUM_SIZE);
+        for (size_t i = 0; i < MusicManager::MAX_SPECTRUM_SIZE; i++)
+        {
+            music_data.spectrum[i] = i < spectrum_data.size() ? spectrum_data[i] : 0.0f;
+        }
+        
+        music_data.current_magnitude_data = current_magnitude_data;
+        music_data.cumulative_magnitude_data = cumulative_magnitude_data;
         ray_marching_shader->update_storage_buffer_uniform(music_data_rid, music_data.to_packed_byte_array());
     }
 

@@ -3,6 +3,10 @@
 
 // based on https://iquilezles.org/articles/fbmsdf/
 
+float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+}
+
 float hash(vec3 p) {
     p = fract(p * vec3(443.897, 397.297, 491.423));
     p += dot(p, p.yxz + 19.19);
@@ -53,5 +57,43 @@ float sdFbm( vec3 p, float d, int octaves )
    }
    return d;
 }
+
+// alternative simple heightmap style terrain
+vec3 terrainHeightAndGradient(vec2 p) {
+    float h = 0.0;
+    vec2 grad = vec2(0.0);
+    float frequency = 0.08;
+    float amplitude = 2.0;
+    const int NUM_WAVES = 20;
+    
+    for (int i = 0; i < NUM_WAVES; i++) {
+        float angle = float(i) * (3.141592653 / float(NUM_WAVES)) + camera.time * 0.01 * float(i) / float(NUM_WAVES);
+        vec2 dir = vec2(cos(angle), sin(angle));
+
+        float arg = dot(p, dir) * frequency + float(i);
+        float s = sin(arg);
+        float c = cos(arg);
+        
+        h += amplitude * s;
+        grad += amplitude * frequency * c * dir;
+        
+        frequency *= 1.02;
+        amplitude *= 0.96;
+    }
+    
+    return vec3(h, grad.x, grad.y);
+}
+
+float sdTerrainCurved(vec3 p) {
+    vec3 hg = terrainHeightAndGradient(p.xz);
+    float h = 2.0 * hg.x * (0.0 + 2.0 * clamp(abs(p.x) * 0.005, 0, 1));
+    vec2 grad = vec2(hg.y, hg.z);
+    
+    float normFactor = sqrt(1.0 + dot(grad, grad));
+    
+    return (p.y - h) / normFactor;
+}
+
+
 
 #endif // #ifndef FBM_GLSL
