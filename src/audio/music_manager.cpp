@@ -158,7 +158,8 @@ void MusicManager::init() {
     //init spectrum
     spectrum_data.resize(spectrum_size);
 
-    for (int i = 0; i < envelope_generators.size(); ++i) {
+    int count = envelope_generators.size();
+    for (int i = 0; i < std::min(count, 4); ++i) {
         Ref<EnvelopeGenerator> generator = envelope_generators[i];
         if (generator.is_valid()) {
             generator->init(song_settings); 
@@ -208,8 +209,8 @@ void MusicManager::update(const float delta) {
 
     update_spectrum();
 
-    int count = envelope_generators.size();
-    for (int i = 0; i < envelope_generators.size(); ++i) {
+    int count =  envelope_generators.size();
+    for (int i = 0; i < std::min(count, 4); ++i) {
         Ref<EnvelopeGenerator> generator = envelope_generators[i];
         if (generator.is_valid() && i < 4) {
             current_magnitude_data[i] = generator->process(delta); 

@@ -112,7 +112,7 @@ SDFResult sdBubblesScene(in vec3 p)
         vec3 color = mix(vec3(0.2, 1.0, 2.0), vec3(3.0, 0.2, 1.0), bubble_height);
         float d = sdSphere(q - vec3(0, 20 * ( 2 * bubble_height - 1), 0), 5.0 * (1 - bubble_height));
 
-        result = smoothUnion(result, sdfResult(d, color), 2.0);
+        result = smoothUnion(result, sdfResult(d, 2.0 * color), 2.0);
     }
     return result;
 }
@@ -145,15 +145,13 @@ SDFResult sdSynthWaveScene(in vec3 p)
 }
 
 // ----------------------- Spectrum Scene -----------------------
-
-
 SDFResult sdSpectrumScene(in vec3 p) {
     float numBars = float(music_data.spectrum_count);
     float barSpacing = 2.0;
     float barWidth = 1.0;
     float gapBuffer = 0.1;
     
-    SDFResult result = sdfResult(1e20, vec3(0));
+    SDFResult result = sdfResult(1e20, vec3(0)); 
     for (int i = -1; i < 2; i++) {
         float cellIndex = clamp(round(p.z / barSpacing) + i, 0.0, numBars - 1.0);
         float localZ = p.z - cellIndex * barSpacing;
@@ -161,7 +159,7 @@ SDFResult sdSpectrumScene(in vec3 p) {
         float spectrum_value = music_data.spectrum[bin];
         float h = 1.0 + 2.0 * spectrum_value * 25.0;
         vec3 q = vec3(p.x, p.y, localZ);
-        float d = sdBox(q - vec3(0, h * 0.5, 0), vec3(barWidth - gapBuffer, h * 0.5, barWidth - gapBuffer));
+        float d = sdBox(q - vec3(0, h * 0.5, 0), vec3(barWidth - gapBuffer, h * 0.5, barWidth - gapBuffer)) - 0.125;
         vec3 col = hsv2rgb(2.0 * vec3(0.5 * cellIndex / numBars, 1.0, 0.5));
 
         result = smoothUnion(result, sdfResult(d, col), 0.0);
@@ -169,6 +167,44 @@ SDFResult sdSpectrumScene(in vec3 p) {
 
     return result;
 }
+
+// ----------------------- Demo Scene -----------------------
+SDFResult sdDemoScene(in vec3 p) {
+
+    p.z -= 20;
+
+    vec3 q;
+    //cube
+    q = p + vec3(0, 2.0 * sin(camera.time + 57.0), 0);
+    SDFResult cube = sdfResult(sdBox(q, vec3(5)), vec3(1,.2,.2));
+
+     // sphere
+    q = p + vec3(20, 2.0 * sin(camera.time + 547.0), 0);
+    SDFResult sphere = sdfResult(sdSphere(q, 5), vec3(.2,1,.2));
+    
+     //torus
+    q = p + vec3(-20, 2.0 * sin(camera.time + 94.0), 0);
+
+    q = rotatePoint(q, vec3(
+        sin(camera.time * 0.5) * 90.0,
+        sin(camera.time * 0.3) * 60,
+        sin(camera.time * 0.7) * 90
+    ));
+
+    // q = rotatePoint(q, vec3(0, 0, 90));
+
+
+    SDFResult torus = sdfResult(sdTorus(q, vec2(5, 2)), vec3(.2,.2,1));
+    
+    // combine
+    SDFResult grid = sdfResult(sdPlane(p, vec3(0,1,0), 0), gridColoring(p, vec3(0.7), vec3(0.9)));
+
+    SDFResult result = smoothUnion(cube, sphere, 2.0f);
+    result = smoothUnion(result, torus, 2.0f);
+    result = smoothUnion(result, grid, 2.0f);
+    return result;
+}
+
 
 // ----------------------- sdScene : function used in raymarching -----------------------
 
@@ -179,7 +215,7 @@ SDFResult sdScene(in vec3 p) {
 #elif SCENE_ID == 2
     return sdfResult(sdMengerScene(p), vec3(0.5));
 #elif SCENE_ID == 3
-    return sdfResult(sdPlane(p, vec3(0,1,0), 0), gridColoring(p, vec3(0.7), vec3(0.9)));
+    return sdDemoScene(p);
 #elif SCENE_ID == 4
     return sdSpectrumScene(p);
 #endif

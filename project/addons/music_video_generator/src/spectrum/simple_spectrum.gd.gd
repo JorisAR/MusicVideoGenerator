@@ -20,7 +20,6 @@ func _draw():
 			Rect2(w * i + OFFSET.x, SIZE.y - height + OFFSET.y, w - 2, height),
 			bar_color
 		)
-
 		draw_rect(
 			Rect2(w * i + OFFSET.x, SIZE.y + OFFSET.y, w - 2, height),
 			color_reflection

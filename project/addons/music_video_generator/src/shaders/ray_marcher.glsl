@@ -4,8 +4,9 @@
 #define MAX_RAY_MARCHING_STEPS 512
 
 #ifndef SCENE_ID
-#define SCENE_ID 4
+#define SCENE_ID 1
 #endif
+
 
 // ----------------------------------- STRUCTS -----------------------------------
 
@@ -53,7 +54,6 @@ layout(std430, set = 1, binding = 2) restrict buffer MusicData {
     float spectrum[64];
     int spectrum_count;
 } music_data;
-
 
 
 // ----------------------------------- SHAPES -----------------------------------

@@ -31,6 +31,7 @@ float sdBox( vec3 p, vec3 b )
     return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
 }
 
+
 float sdBox2D(vec2 p, vec2 b) {
     vec2 d = abs(p) - b;
     return length(max(d, vec2(0.0))) + min(max(d.x, d.y), 0.0);
@@ -126,6 +127,32 @@ SDFResult smoothDifference(SDFResult a, SDFResult b, float k) {
 }
 
 // ------------------------------------------------ Utils ------------------------------------------------
+
+vec3 rotatePoint(vec3 p, vec3 r) {
+    vec3 angles = radians(r);
+
+    mat3 rotX = mat3(
+        1, 0, 0,
+        0, cos(angles.x), -sin(angles.x),
+        0, sin(angles.x), cos(angles.x)
+    );
+
+    mat3 rotY = mat3(
+        cos(angles.y), 0, sin(angles.y),
+        0, 1, 0,
+        -sin(angles.y), 0, cos(angles.y)
+    );
+
+    mat3 rotZ = mat3(
+        cos(angles.z), -sin(angles.z), 0,
+        sin(angles.z), cos(angles.z), 0,
+        0, 0, 1
+    );
+
+    mat3 rotationMatrix = rotZ * rotY * rotX;
+    return rotationMatrix * p;
+}
+
 
 vec3 hsv2rgb(vec3 c) {
   vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);

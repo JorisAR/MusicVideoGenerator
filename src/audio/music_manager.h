@@ -30,9 +30,6 @@ constexpr static int MAX_SPECTRUM_SIZE = 64;
     TypedArray<Ref<EnvelopeGenerator>> get_envelope_generators() const;
     void set_envelope_generators(const TypedArray<Ref<EnvelopeGenerator>> value);
 
-    // The spectrum analyzer instance:
-    Ref<AudioEffectSpectrumAnalyzerInstance> spectrum;
-
     Vector4 get_current_magnitude_data() const;
     Vector4 get_cumulative_magnitude_data() const;
     PackedFloat32Array get_spectrum_data() const;
@@ -83,6 +80,8 @@ private:
     AudioStreamPlayer* audio_stream_player = nullptr;
     TypedArray<Ref<EnvelopeGenerator>> envelope_generators;
     Ref<SongSettings> song_settings;
+
+    Ref<AudioEffectSpectrumAnalyzerInstance> spectrum;
 };
 
 #endif // MUSIC_MANAGER_H

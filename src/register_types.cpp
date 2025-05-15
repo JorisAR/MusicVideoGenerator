@@ -3,9 +3,11 @@
 #include "audio/song_settings.h"
 #include "audio/music_manager.h"
 #include "audio/envelope_generators/envelope_generator.h"
-#include "audio/envelope_generators/dual_envelope_transient_generator.h"
+#include "audio/envelope_generators/transient_envelope_generator.h"
 #include "audio/envelope_generators/beat_sequencer_envelope.h"
 #include "audio/envelope_generators/lfo_envelope_generator.h"
+#include "audio/envelope_generators/amplitude_envelope_generator.h"
+#include "audio/envelope_generators/dual_envelope_transient_generator.h"
 #include "animation_rig/animation_rig.h"
 #include "animation_rig/animation_sequence.h"
 #include "animation_rig/animation_sequence_move.h"
@@ -23,9 +25,11 @@ void initialize_music_video_generator_module(ModuleInitializationLevel p_level)
 
         //generators
         GDREGISTER_ABSTRACT_CLASS(EnvelopeGenerator);
-        GDREGISTER_CLASS(DualEnvelopeTransientGenerator);
+        GDREGISTER_CLASS(TransientEnvelopeGenerator);
         GDREGISTER_CLASS(BeatSequencerEnvelope);
         GDREGISTER_CLASS(LFOEnvelopeGenerator);
+        GDREGISTER_CLASS(AmplitudeEnvelopeGenerator);
+        GDREGISTER_CLASS(DualEnvelopeTransientGenerator);
         // UtilityFunctions::print("Music Video Generator module initialized.");
 
         //Rendering
