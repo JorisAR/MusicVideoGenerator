@@ -1,10 +1,10 @@
 #[compute]
 #version 460
 
-#define MAX_CONE_MARCHING_STEPS 25
+#define MAX_CONE_MARCHING_STEPS 50
 
 #ifndef SCENE_ID
-#define SCENE_ID 3
+#define SCENE_ID 5
 #endif
 
 // ----------------------------------- STRUCTS -----------------------------------

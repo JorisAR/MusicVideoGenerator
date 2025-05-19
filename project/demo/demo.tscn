@@ -1,43 +1,56 @@
-[gd_scene load_steps=20 format=3 uid="uid://s8dmi2g1hu2t"]
+[gd_scene load_steps=24 format=3 uid="uid://s8dmi2g1hu2t"]
 
 [ext_resource type="Script" uid="uid://bpaijq7jcidqq" path="res://demo/movable_camera.gd" id="1_d6po2"]
-[ext_resource type="AudioStream" uid="uid://cqyh43s2sr7w6" path="res://demo/assets/Lightrays (mastered).mp3" id="2_j5lb4"]
 [ext_resource type="Script" uid="uid://dubmrojapyqru" path="res://demo/camera_shake.gd" id="2_onu7k"]
 [ext_resource type="SongSettings" uid="uid://dvt7bjcj2njsj" path="res://demo/demo_song_settings.tres" id="2_u10mr"]
 [ext_resource type="Script" uid="uid://c1tfxgs78pijt" path="res://demo/fps_meter.gd" id="3_dar0o"]
+[ext_resource type="AudioStream" uid="uid://dhuxpc6glnvww" path="res://demo/assets/sax_synth_wave.mp3" id="4_onu7k"]
 [ext_resource type="Script" uid="uid://dka0quv7b7ojv" path="res://addons/music_video_generator/src/spectrum/simple_spectrum.gd.gd" id="6_onu7k"]
+[ext_resource type="Script" uid="uid://bhhw5pbc115sx" path="res://demo/screenshot.gd" id="7_s1s6j"]
 
 [sub_resource type="AnimationSequenceMove" id="AnimationSequenceMove_u10mr"]
+start_position = Vector3(10, 0, 10)
 end_position = Vector3(0, 0, 10)
+look_at_enabled = true
+
+[sub_resource type="AnimationSequenceMove" id="AnimationSequenceMove_onvmd"]
+start_position = Vector3(10, 5, 0)
+end_position = Vector3(5, -2.5, 15)
+look_at_enabled = true
 
 [sub_resource type="AnimationSequenceMove" id="AnimationSequenceMove_onu7k"]
-end_position = Vector3(0, 10, 0)
+start_position = Vector3(-10, 0, 0)
+end_position = Vector3(-10, 10, 0)
 look_at_enabled = true
-look_at_position = Vector3(10, 0, 0)
+
+[sub_resource type="AnimationSequenceMove" id="AnimationSequenceMove_s1s6j"]
+start_position = Vector3(15, 10, 10)
+end_position = Vector3(7.5, 0, 7.5)
+look_at_enabled = true
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_onu7k"]
 
-[sub_resource type="DualEnvelopeTransientGenerator" id="DualEnvelopeTransientGenerator_onu7k"]
-bus_id = 1
-min_frequency = 15000.0
-fast_attack = 0.01
-fast_decay = 0.01
-
-[sub_resource type="TransientEnvelopeGenerator" id="TransientEnvelopeGenerator_onu7k"]
-bus_id = 1
-min_frequency = 15000.0
-threshold = 0.25
-
-[sub_resource type="AmplitudeEnvelopeGenerator" id="AmplitudeEnvelopeGenerator_onu7k"]
-bus_id = 1
-smoothing_parameter = 100000.0
-
 [sub_resource type="BeatSequencerEnvelope" id="BeatSequencerEnvelope_u10mr"]
+
+[sub_resource type="BeatSequencerEnvelope" id="BeatSequencerEnvelope_onu7k"]
+sequence = Array[bool]([true, false, true, false])
+
+[sub_resource type="LFOEnvelopeGenerator" id="LFOEnvelopeGenerator_onu7k"]
+lfo_mode = 3
+duration_bars = 32.0
+
+[sub_resource type="LFOEnvelopeGenerator" id="LFOEnvelopeGenerator_s1s6j"]
+lfo_mode = 2
+min_value = -5.0
+max_value = 5.0
+duration_bars = 8.0
+phase_bars = 4.0
+
+[sub_resource type="LabelSettings" id="LabelSettings_s1s6j"]
 
 [sub_resource type="Environment" id="Environment_j5lb4"]
 background_mode = 3
 background_canvas_max_layer = 100
-tonemap_mode = 3
 glow_enabled = true
 glow_normalized = true
 glow_blend_mode = 4
@@ -60,19 +73,19 @@ noise = SubResource("FastNoiseLite_u10mr")
 [node name="Demo" type="Node3D"]
 
 [node name="Camera" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.965926, 0.258819, 0, -0.258819, 0.965926, 0, 15, 0)
+transform = Transform3D(-1, 2.26267e-08, -8.44439e-08, 0, 0.965926, 0.258819, 8.74228e-08, 0.258819, -0.965926, 0, 10, 0)
 script = ExtResource("1_d6po2")
+cinematic_speed_smoothing = 1.0
+cinematic_rotation_smoothing = 1.0
 
 [node name="AnimationRig" type="AnimationRig" parent="Camera"]
 enabled = false
-randomize_sequence_order = true
 song_settings = ExtResource("2_u10mr")
-animation_sequences = Array[AnimationSequence]([SubResource("AnimationSequenceMove_u10mr"), SubResource("AnimationSequenceMove_onu7k")])
+animation_sequences = Array[AnimationSequence]([SubResource("AnimationSequenceMove_u10mr"), SubResource("AnimationSequenceMove_onvmd"), SubResource("AnimationSequenceMove_onu7k"), SubResource("AnimationSequenceMove_s1s6j")])
 transform = Transform3D(1, 0, 0, 0, 1, -9.31323e-10, 0, 9.31323e-10, 1, 0, 0, 0)
 
 [node name="CameraGimbal" type="Node3D" parent="Camera/AnimationRig"]
 script = ExtResource("2_onu7k")
-enabled = false
 shake_amplitude = 5.0
 shake_frequency = 5.0
 noise = SubResource("FastNoiseLite_onu7k")
@@ -81,7 +94,9 @@ noise = SubResource("FastNoiseLite_onu7k")
 output_texture = NodePath("TextureRect")
 music_manager = NodePath("../../../../MusicManager")
 far_plane = 2000.0
+cone_resolution_scale = 5
 cone_marching_enabled = false
+transform = Transform3D(1, 1.77636e-15, -7.10543e-15, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 
 [node name="TextureRect" type="TextureRect" parent="Camera/AnimationRig/CameraGimbal/RayMarchingCamera"]
 anchors_preset = 15
@@ -93,23 +108,26 @@ grow_vertical = 2
 [node name="MusicManager" type="MusicManager" parent="." node_paths=PackedStringArray("audio_stream_player")]
 audio_stream_player = NodePath("AudioStreamPlayer")
 song_settings = ExtResource("2_u10mr")
-envelope_generators = Array[EnvelopeGenerator]([SubResource("DualEnvelopeTransientGenerator_onu7k"), SubResource("TransientEnvelopeGenerator_onu7k"), SubResource("AmplitudeEnvelopeGenerator_onu7k"), SubResource("BeatSequencerEnvelope_u10mr")])
+envelope_generators = Array[EnvelopeGenerator]([SubResource("BeatSequencerEnvelope_u10mr"), SubResource("BeatSequencerEnvelope_onu7k"), SubResource("LFOEnvelopeGenerator_onu7k"), SubResource("LFOEnvelopeGenerator_s1s6j")])
 spectrum_log_x_axis = false
 
 [node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="MusicManager"]
-stream = ExtResource("2_j5lb4")
+stream = ExtResource("4_onu7k")
 autoplay = true
 bus = &"Music"
 
 [node name="Label" type="Label" parent="."]
+visible = false
 offset_right = 40.0
 offset_bottom = 23.0
+label_settings = SubResource("LabelSettings_s1s6j")
 script = ExtResource("3_dar0o")
 
 [node name="Environment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_j5lb4")
 
 [node name="Spectrum" type="Node2D" parent="."]
+visible = false
 modulate = Color(2, 2, 2, 1)
 
 [node name="Bars" type="Node2D" parent="Spectrum" node_paths=PackedStringArray("reference_node", "music_manager")]
@@ -133,3 +151,6 @@ texture = SubResource("GradientTexture2D_u10mr")
 visible = false
 position = Vector2(384, 353)
 texture = SubResource("NoiseTexture2D_onu7k")
+
+[node name="Screenshot" type="Node" parent="."]
+script = ExtResource("7_s1s6j")

@@ -2,14 +2,14 @@
 #define SCENE_GLSL
 
 vec2 offset(vec2 q, float p) {
-    q.x += -2.5 + (1.0 + sin((p) * 0.1 + camera.time * 0.5)) * 1.0;
+    q.x += -2.5 + (1.0 + sin((p) * 0.25 + camera.time * 0.25)) * 1.0;
     return q;
 }
 
 SDFResult sdGrid(in vec3 p)
 {
-    const float period = 5.0; 
-    float halfThickness = 0.5 + 0.25 * music_data.current.x;    
+    const float period = 10.0; 
+    float halfThickness = 0.5 + 0.05 * music_data.current.y;    
 
     const vec2[4] offsets = {vec2(0.0, 0.0), vec2(period, 0.0), vec2(0.0, period), vec2(period, period)};
     vec3 q = mod(p, period) - 0.5 * period;
@@ -20,21 +20,64 @@ SDFResult sdGrid(in vec3 p)
         d = min(d, sdBox2D(offset(vec2(q.x, q.y) + offsets[i], p.z), vec2(halfThickness)));
     }
 
-    return sdfResult(d, vec3(0.5, 0.5, 0.5));
+    return sdfResult(d, vec3(fract(abs(p * 0.001))));
 }
 
 SDFResult sdComplexGrid(in vec3 p)
 {    
-    SDFResult box = sdfResult(sdBox(p, vec3(40.0)), vec3(0.5, 0.5, 1.0));
-    SDFResult sphere = sdfResult(sdSphere(p, 20.0), vec3(1.0, 0.5, 0.5));
+    // SDFResult box = sdfResult(sdBox(p, vec3(40.0)), vec3(0.5, 0.5, 1.0));
+    // SDFResult sphere = sdfResult(sdSphere(p, 20.0), vec3(1.0, 0.5, 0.5));
     SDFResult grid = sdGrid(p);
 
-    SDFResult res = smoothDifference(sdGrid(p), box, 2.0);
-    res = smoothUnion(res, sphere, 0.5);
-    return res;
+    // SDFResult res = smoothDifference(sdGrid(p), box, 2.0);
+    // res = smoothUnion(res, sphere, 0.5);
+    return grid;
 }
 
-float sdMengerScene(in vec3 p)
+//fractals
+
+//mandel bulb
+// Based on: https://iquilezles.org/articles/mandelbulb/
+SDFResult sdMandelBulp(in vec3 p)
+{
+    // float scaleFactor = 1.2 + 0.2  * sin(camera.time * 0.3); 
+    float scaleFactor = 1.0;
+    vec3 w = p * scaleFactor; // Slightly scale the fractal over time
+
+    float m = dot(w,w);
+
+    vec4 trap = vec4(abs(w),m);
+	float dz = 1.0;
+    
+	for( int i=0; i<4; i++ )
+    {        
+        // dz = 8*z^7*dz
+		dz = 8.0*pow(m,3.5)*dz + 1.0;
+      
+        // z = z^8+c
+        float r = length(w);
+        float b = 8.0*acos(w.y / r);
+        float a = 8.0*atan(w.x, w.z);
+        w = p + pow(r,8.0) * vec3( sin(b)*sin(a), cos(b), sin(b)*cos(a)); 
+        
+        trap = min( trap, vec4(abs(w),m) );
+
+        m = dot(w,w);
+		if( m > 256.0 )
+            break;
+    }
+
+    vec4 color = vec4(m,trap.yzw);
+
+    float d =  0.25*log(m)*sqrt(m)/dz;
+    vec3 hsv = rgb2hsv(color.rgb);
+    vec3 rgb = hsv2rgb(fract(hsv + vec3(0.6 + camera.time * 0.000001, 0, 0))); // 
+    return sdfResult(d, 4.0 * rgb);
+}
+
+// menger cubes
+
+float sdMengerBasic(in vec3 p)
 {
     p *= 0.1;
     float d = sdBox(p, vec3(1.0));
@@ -61,6 +104,53 @@ float sdMengerScene(in vec3 p)
 
     return res.x;
 }
+
+SDFResult sdMengerComplex(vec3 p){
+    // vec3 offset = vec3(.85,1.02,.6) + vec3( 0.025 * sin(music_data.current.y), 0.1 * sin(music_data.cumulative.x), 0);
+    vec3 offset = vec3(1,1,1) + vec3(0.01 * camera.time, 0.005 * camera.time, 0.0025 * camera.time);
+    // vec3 offset = vec3(.95,1.1,.5) + vec3( 0.025 * sin(camera.time), 0.1 * sin(music_data.cumulative.x), 0);
+    const float scale = 3.0f; 
+    const vec3 angle = vec3(0); 
+    const int iterations = 7;
+    
+	float orbit = 1e20;
+    float s = 1.;
+    
+    for(int n=0;n < iterations;n++) {        
+        // p *= m;
+
+        // p = rotatePoint(p, vec3(0, 2.5 + music_data.current.w, 0));
+        p = rotatePoint(p, vec3(0, 0.1 * camera.time, 0));
+        
+        //folding
+    	p = abs(p);  
+    	if(p.x<p.y) p.xy = p.yx;
+    	if(p.x<p.z) p.xz = p.zx;
+    	if(p.y<p.z) p.zy = p.yz;	 
+        
+        //offset
+    	p.z -=  .5*offset.z*(scale-1.)/scale;
+    	p.z  = -abs(p.z);
+    	p.z +=  .5*offset.z*(scale-1.)/scale;
+              
+        //scale
+   		p *= scale; 
+        s /= scale;
+        
+		p.x -= offset.x*(scale-1.);
+		p.y -= offset.y*(scale-1.);  
+        
+        //simple origin point orbit
+        orbit = min(orbit,dot(p,p));
+    }
+
+    float dis = sdBox(p,vec3(1));
+    dis *= s;
+    
+    return sdfResult(dis, 1.0 * hsv2rgb(vec3(0.3, 0.9, 0.9 * sqrt(orbit)))); 
+    // return sdfResult(dis, 2.0 * hsv2rgb(vec3(fract(music_data.current.z), 0.9, 0.9 * sqrt(orbit)))); 
+}
+
 
 // ----------------------- synthwave demo scene -----------------------
 
@@ -147,9 +237,9 @@ SDFResult sdSynthWaveScene(in vec3 p)
 // ----------------------- Spectrum Scene -----------------------
 SDFResult sdSpectrumScene(in vec3 p) {
     float numBars = float(music_data.spectrum_count);
-    float barSpacing = 2.0;
+    float barSpacing = 3.0;
     float barWidth = 1.0;
-    float gapBuffer = 0.1;
+    float gapBuffer = 1.0;
     
     SDFResult result = sdfResult(1e20, vec3(0)); 
     for (int i = -1; i < 2; i++) {
@@ -159,7 +249,7 @@ SDFResult sdSpectrumScene(in vec3 p) {
         float spectrum_value = music_data.spectrum[bin];
         float h = 1.0 + 2.0 * spectrum_value * 25.0;
         vec3 q = vec3(p.x, p.y, localZ);
-        float d = sdBox(q - vec3(0, h * 0.5, 0), vec3(barWidth - gapBuffer, h * 0.5, barWidth - gapBuffer)) - 0.125;
+        float d = sdBox(q - vec3(0, h * 0.5, 0), vec3(barWidth - gapBuffer, h * 0.5, barWidth - gapBuffer)) - barWidth;
         vec3 col = hsv2rgb(2.0 * vec3(0.5 * cellIndex / numBars, 1.0, 0.5));
 
         result = smoothUnion(result, sdfResult(d, col), 0.0);
@@ -171,6 +261,8 @@ SDFResult sdSpectrumScene(in vec3 p) {
 // ----------------------- Demo Scene -----------------------
 SDFResult sdDemoScene(in vec3 p) {
 
+    float blend_factor = clamp(camera.time - 10, 0,1);
+
     p.z -= 20;
 
     vec3 q;
@@ -179,25 +271,24 @@ SDFResult sdDemoScene(in vec3 p) {
     SDFResult cube = sdfResult(sdBox(q, vec3(5)), vec3(1,.2,.2));
 
      // sphere
-    q = p + vec3(20, 2.0 * sin(camera.time + 547.0), 0);
+    q = p + vec3(-20 + 15 * blend_factor, 2.0 * sin(camera.time + 547.0), 0);
     SDFResult sphere = sdfResult(sdSphere(q, 5), vec3(.2,1,.2));
     
      //torus
-    q = p + vec3(-20, 2.0 * sin(camera.time + 94.0), 0);
+    q = p + vec3(20 - 15 * blend_factor, 2.0 * sin(camera.time + 94.0), 0);
+    // SDFResult torus = sdfResult(sdBox(q, vec3(5, 0.01, 5)), vec3(.2,.2,1));
 
     q = rotatePoint(q, vec3(
         sin(camera.time * 0.5) * 90.0,
         sin(camera.time * 0.3) * 60,
         sin(camera.time * 0.7) * 90
     ));
-
-    // q = rotatePoint(q, vec3(0, 0, 90));
-
-
     SDFResult torus = sdfResult(sdTorus(q, vec2(5, 2)), vec3(.2,.2,1));
     
     // combine
-    SDFResult grid = sdfResult(sdPlane(p, vec3(0,1,0), 0), gridColoring(p, vec3(0.7), vec3(0.9)));
+    SDFResult grid = sdfResult(sdPlane(p + vec3(0,5,0), vec3(0,1,0), 0), gridColoring(p, vec3(0.7), vec3(0.9)));
+
+    
 
     SDFResult result = smoothUnion(cube, sphere, 2.0f);
     result = smoothUnion(result, torus, 2.0f);
@@ -205,19 +296,101 @@ SDFResult sdDemoScene(in vec3 p) {
     return result;
 }
 
+SDFResult sdDemoScene2(in vec3 p) {
+
+    float blend_factor = 2.0 * clamp(camera.time - 10, 0,1);
+    
+
+    p.z -= 20;
+
+    vec3 q;
+    //union
+    q = p + vec3(-20, 0.5 * sin(camera.time + 57.0), 0);
+    SDFResult sphere = sdfResult(sdSphere(q, 5), vec3(.2,1,.2));
+    SDFResult box = sdfResult(sdBox(q + vec3(0,2,0), vec3(5)), vec3(1,.2,.2));
+    SDFResult o1 = smoothUnion(sphere, box, blend_factor);
+
+    //difference
+    q = p + vec3(0, 0.5 * sin(camera.time + 57.0), 0);
+    sphere = sdfResult(sdSphere(q, 5), vec3(.2,1,.2));
+    box = sdfResult(sdBox(q + vec3(0,2,0), vec3(5)), vec3(1,.2,.2));
+    SDFResult o2 = smoothDifference(box, sphere, blend_factor);
+
+    //intersection
+    q = p + vec3(20, 0.5 * sin(camera.time + 57.0), 0);
+    sphere = sdfResult(sdSphere(q, 5), vec3(.2,1,.2));
+    box = sdfResult(sdBox(q + vec3(0,2,0), vec3(5)), vec3(1,.2,.2));
+    SDFResult o3 = smoothIntersection(box, sphere, blend_factor);
+    
+    // combine
+    SDFResult grid = sdfResult(sdPlane(p + vec3(0,8,0), vec3(0,1,0), 0), gridColoring(p, vec3(0.7), vec3(0.9)));    
+
+    SDFResult result = smoothUnion(o1, o2, 2.0f);
+    result = smoothUnion(result, o3, 2.0f);
+    result = smoothUnion(result, grid, 2.0f);
+    return result;
+}
+
+//shadow
+SDFResult sdDemoScene3(in vec3 p) {
+
+    float blend_factor = 10.0 * clamp(camera.time - 1, 0,1);    
+
+    p.z -= 20;
+
+    vec3 q;
+    //union
+    q = p + vec3(0, -blend_factor, 0);
+
+    SDFResult box = sdfResult(sdBox(q + vec3(0,6,0), vec3(1, 5, 5)), vec3(1,.2,.2));
+
+    
+    // combine
+    SDFResult grid = sdfResult(sdPlane(p + vec3(0,0,0), vec3(0,1,0), 0), gridColoring(p, vec3(0.7), vec3(0.9)));    
+
+    return smoothUnion(box, grid, 1.0f);
+}
+
+//reflection
+SDFResult sdDemoScene4(in vec3 p) {
+
+    float blend_factor = 10.0 * clamp(camera.time - 1, 0,1);    
+
+    p.z -= 20;
+
+    vec3 q;
+    //union
+    q = p + vec3(0, -blend_factor, 0);
+
+    SDFResult box = sdfResult(sdBox(q + vec3(0,6,-6), vec3(5, 5, 1)), vec3(1,.2,.2));
+    SDFResult mirror = sdfResult(sdBox((p + vec3(0,0,2)),  vec3(10, 0.1, 5)), vec3(1,.2,.2));
+    mirror.reflectivity = 1.0;
+    
+    // combine
+    SDFResult grid = sdfResult(sdPlane(p + vec3(0,0,0), vec3(0,1,0), 0), gridColoring(p, vec3(0.7), vec3(0.9)));    
+
+    SDFResult result = smoothUnion(box, grid, 2.0f);
+    result = smoothUnion(result, mirror, 0.0f);
+    return result;
+}
+
+
 
 // ----------------------- sdScene : function used in raymarching -----------------------
 
 SDFResult sdScene(in vec3 p) { 
-    
 #if SCENE_ID == 1
     return sdSynthWaveScene(p);
 #elif SCENE_ID == 2
-    return sdfResult(sdMengerScene(p), vec3(0.5));
+    return sdComplexGrid(p);
 #elif SCENE_ID == 3
-    return sdDemoScene(p);
+    return sdDemoScene4(p);
 #elif SCENE_ID == 4
     return sdSpectrumScene(p);
+#elif SCENE_ID == 5
+    return sdMandelBulp(p * 0.1);
+#elif SCENE_ID == 6
+    return sdMengerComplex(p * 0.15);
 #endif
     return smoothUnion(sdfResult(sdBox(p + vec3(0,10,0), vec3(10)), vec3(0.5)), sdfResult(sdSphere(p, 10.0), vec3(1.0, 0.5, 1.0)), 2.0);
 }

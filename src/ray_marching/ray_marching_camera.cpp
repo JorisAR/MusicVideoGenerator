@@ -266,7 +266,6 @@ void RayMarchingCamera::init()
             render_parameters.width, render_parameters.height, RenderingDevice::DATA_FORMAT_R32G32B32A32_SFLOAT,
             RenderingDevice::TEXTURE_USAGE_STORAGE_BIT | RenderingDevice::TEXTURE_USAGE_CAN_UPDATE_BIT |
                 RenderingDevice::TEXTURE_USAGE_CAN_COPY_FROM_BIT | RenderingDevice::TEXTURE_USAGE_SAMPLING_BIT);
-                //DATA_FORMAT_R32G32B32A32_UINT
         if (output_texture_rect == nullptr)
         {
             UtilityFunctions::printerr("No output texture set.");

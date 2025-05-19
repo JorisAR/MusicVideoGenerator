@@ -3,8 +3,12 @@
 
 #define MAX_RAY_MARCHING_STEPS 512
 
+// #define DISABLE_SHADOWS
+// #define DISABLE_PHONG_SHADING
+// #define DISABLE_REFLECTIONS
+
 #ifndef SCENE_ID
-#define SCENE_ID 1
+#define SCENE_ID 5
 #endif
 
 
@@ -22,9 +26,7 @@ struct Ray {
 };
 
 
-
 // ----------------------------------- GENERAL STORAGE -----------------------------------
-
 layout(set = 0, binding = 0, rgba8) restrict uniform writeonly image2D outputImage;
 layout(set = 0, binding = 1, r32f) restrict uniform writeonly image2D depthBuffer;
 layout(set = 0, binding = 2, r32f) restrict uniform image2D coneBuffer;
@@ -55,16 +57,12 @@ layout(std430, set = 1, binding = 2) restrict buffer MusicData {
     int spectrum_count;
 } music_data;
 
-
 // ----------------------------------- SHAPES -----------------------------------
-
 #include "primitives.glsl"
 #include "fbm.glsl"
 #include "scenes.glsl"
 
-
 // ----------------------------------- FUNCTIONS -----------------------------------
-
 vec2 pcg2d(inout uvec2 seed) {
     // PCG2D, as described here: https://jcgt.org/published/0009/03/02/
     seed = 1664525u * seed + 1013904223u;
@@ -85,7 +83,6 @@ uvec2 prng_seed(vec2 pos, uint frame) {
     return seed * 0x9e3779b9u;
 }
 
-
 vec2 box_muller(vec2 rands) {
     float R = sqrt(-2.0f * log(rands.x));
     float theta = 6.2831853f * rands.y;
@@ -97,10 +94,13 @@ vec3 sampleSky(vec3 direction) {
 #if SCENE_ID == 1
     return mix(0.05, 0.25, t) * vec3(0.2, 0.02, 0.3);
 #elif SCENE_ID == 2
-    return mix(vec3(0.95), vec3(0.9, 0.94, 1.0), t) * 1.0f;
+    // return mix(vec3(0.95), vec3(0.9, 0.94, 1.0), t) * 1.0f;
+#elif SCENE_ID == 3
+    return mix(vec3(0.2, 0.3, 0.98), vec3(0.4, 0.5, 1.0), t) * 1.0f;
 #endif
     return vec3(0.0);
 }
+
 
 vec3 geometry_color(const vec3 position) {
     const vec3 red = vec3(0.2, 0.2, 0.4);
@@ -137,7 +137,8 @@ SDFResult ray_march(vec3 origin, vec3 direction, out vec3 hit_position, out floa
         t += d;
     }
 
-    vec3 sky_color = steps >= MAX_RAY_MARCHING_STEPS ? vec3(0) : sampleSky(direction);
+    // vec3 sky_color = steps >= MAX_RAY_MARCHING_STEPS ? vec3(0) : sampleSky(direction);
+    vec3 sky_color = sampleSky(direction);
     return sdfResult(-1.0, sky_color);
 }
 
@@ -192,8 +193,9 @@ float softshadow(in vec3 ro, in vec3 rd, float k)
     return res;
 }
 
-// ----------------------------------- MAIN -----------------------------------
 
+
+// ----------------------------------- MAIN -----------------------------------
 layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 void main() {
     ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
@@ -218,8 +220,8 @@ void main() {
     // imageStore(outputImage, pos, vec4(vec3(init_t), 1.0));
     // return;
 
-    // Define a simple directional light (e.g., coming from (1, 1, 1)).
-    vec3 directional_light = normalize(vec3(1.0, 1.0, 1.0));
+
+    vec3 directional_light = normalize(vec3(-1.0, 1.0, 0.0));
     
     int steps = 0;
     float min_t = camera.far;
@@ -231,12 +233,14 @@ void main() {
     float t = result.d;
     
     vec3 color = result.color;
+    vec3 sky_color = sampleSky(ray_dir);
 
     if (t >= 0.0) {
-        // vec3 hitPos = ray_origin + t * ray_dir;
+        float linear_depth = (t - camera.near) / (camera.far - camera.near);
         vec3 normal = calculateNormal(hitPos);
-        // float shadow = softshadow(hitPos + normal * 0.001, directional_light, 50.0);
 
+#ifndef DISABLE_REFLECTIONS
+        //reflections
         if(result.reflectivity > 0.0) {
             vec3 reflectDir = reflect(ray_dir, normal);
             int reflectSteps = 0;
@@ -245,14 +249,18 @@ void main() {
             vec3 reflectedColor = ray_march(hitPos + normal * 0.001, reflectDir, reflectHitPos, reflectMinT, reflectSteps).color;
             color =  mix(color, reflectedColor, result.reflectivity);
         }
+#endif
 
 
-        // shadow = 1.0f;
-        // float linear_depth = (t - camera.near) / (camera.far - camera.near);
-        // color = phongShading(camera.position.xyz, hitPos, normal, directional_light);
-        // color = vec3(1.0);
+#ifndef DISABLE_SHADOWS
+        color = color * softshadow(hitPos + normal * 0.001, directional_light, 50.0);
+#endif
+
+#ifndef DISABLE_PHONG_SHADING
+        color = color * phongShading(camera.position.xyz, hitPos, normal, directional_light);
+#endif
         // color = geometry_color(hitPos);
-        color *= (1 - steps / float(MAX_RAY_MARCHING_STEPS));
+        color = mix(color, sky_color, (steps / float(MAX_RAY_MARCHING_STEPS)));
         // color = mix(color, sky_color, pow(linear_depth, 1.0));
     }
 
