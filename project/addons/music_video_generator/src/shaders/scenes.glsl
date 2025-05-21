@@ -106,8 +106,10 @@ float sdMengerBasic(in vec3 p)
 }
 
 SDFResult sdMengerComplex(vec3 p){
+    float t = camera.time;
+    // float t = 25.0f;
     // vec3 offset = vec3(.85,1.02,.6) + vec3( 0.025 * sin(music_data.current.y), 0.1 * sin(music_data.cumulative.x), 0);
-    vec3 offset = vec3(1,1,1) + vec3(0.01 * camera.time, 0.005 * camera.time, 0.0025 * camera.time);
+    vec3 offset = vec3(1,1,1) + vec3(0.01 * t, 0.005 * t, 0.0025 * t);
     // vec3 offset = vec3(.95,1.1,.5) + vec3( 0.025 * sin(camera.time), 0.1 * sin(music_data.cumulative.x), 0);
     const float scale = 3.0f; 
     const vec3 angle = vec3(0); 
@@ -120,7 +122,7 @@ SDFResult sdMengerComplex(vec3 p){
         // p *= m;
 
         // p = rotatePoint(p, vec3(0, 2.5 + music_data.current.w, 0));
-        p = rotatePoint(p, vec3(0, 0.1 * camera.time, 0));
+        p = rotatePoint(p, vec3(0, 0.1 * t, 0));
         
         //folding
     	p = abs(p);  

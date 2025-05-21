@@ -3,12 +3,13 @@
 
 #define MAX_RAY_MARCHING_STEPS 512
 
-// #define DISABLE_SHADOWS
-// #define DISABLE_PHONG_SHADING
-// #define DISABLE_REFLECTIONS
+
+#define DISABLE_SHADOWS
+#define DISABLE_PHONG_SHADING
+#define DISABLE_REFLECTIONS
 
 #ifndef SCENE_ID
-#define SCENE_ID 5
+#define SCENE_ID 6
 #endif
 
 
